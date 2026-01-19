@@ -1,0 +1,10 @@
+{
+  "name": "agent-share",
+  "private": true,
+  "devDependencies": {
+    "husky": "^9.1.7"
+  },
+  "scripts": {
+    "prepare": "husky"
+  }
+}
