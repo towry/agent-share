@@ -229,10 +229,12 @@ const DECISIONS_REVIEW_PROMPT = `You are a decision review assistant. Your job i
  * Read and validate lifeguard config content.
  * Returns the content if valid, or an error message if invalid/empty.
  */
-function readLifeguardConfig(configPath: string): {
-  ok: true;
-  content: string;
-} | { ok: false; error: string } {
+function readLifeguardConfig(configPath: string):
+  | {
+      ok: true;
+      content: string;
+    }
+  | { ok: false; error: string } {
   try {
     const content = fs.readFileSync(configPath, "utf-8").trim();
     if (!content) {
@@ -283,13 +285,8 @@ function findLifeguardConfig(cwd: string): string | null {
  * Find the closest lifeguard config by walking up from a file's directory.
  * Stops at repoRoot to avoid searching beyond the repository.
  */
-function findLifeguardConfigForFile(
-  filePath: string,
-  repoRoot: string,
-): string | null {
-  const absPath = path.isAbsolute(filePath)
-    ? filePath
-    : path.join(repoRoot, filePath);
+function findLifeguardConfigForFile(filePath: string, repoRoot: string): string | null {
+  const absPath = path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath);
   let dir = path.dirname(absPath);
   const normalizedRoot = path.resolve(repoRoot);
 
@@ -317,17 +314,13 @@ interface ExtractedToolCall {
   result?: string;
 }
 
-function getMessagesFromEntries(
-  entries: SessionEntry[],
-): SessionAgentMessage[] {
+function getMessagesFromEntries(entries: SessionEntry[]): SessionAgentMessage[] {
   return entries
     .filter((e): e is SessionMessageEntry => e.type === "message")
     .map((e) => e.message);
 }
 
-function extractToolCallsFromMessages(
-  messages: SessionAgentMessage[],
-): ExtractedToolCall[] {
+function extractToolCallsFromMessages(messages: SessionAgentMessage[]): ExtractedToolCall[] {
   const toolCalls: ExtractedToolCall[] = [];
   const pendingCalls = new Map<string, ExtractedToolCall>();
 
@@ -404,14 +397,9 @@ function extractCodeChanges(toolCalls: ExtractedToolCall[]): string[] {
 
     if (toolName === "bash") {
       const command = input?.command as string | undefined;
-      if (
-        command &&
-        /\b(git\s+commit|git\s+add|rm\s+-|mv\s+|cp\s+)/.test(command)
-      ) {
+      if (command && /\b(git\s+commit|git\s+add|rm\s+-|mv\s+|cp\s+)/.test(command)) {
         const output = typeof result === "string" ? result.slice(0, 300) : "";
-        changes.push(
-          `**Bash: ${command}**\n${output ? `Output: ${output}` : ""}`,
-        );
+        changes.push(`**Bash: ${command}**\n${output ? `Output: ${output}` : ""}`);
       }
     }
   }
@@ -459,10 +447,7 @@ function buildReviewContext(
 
   if (focus === "all" || focus === "code") {
     if (codeChanges.length > 0) {
-      contextParts.push(
-        "## Session Code Changes (from tool calls)\n\n" +
-          codeChanges.join("\n\n"),
-      );
+      contextParts.push("## Session Code Changes (from tool calls)\n\n" + codeChanges.join("\n\n"));
     }
     if (vcsContext) {
       contextParts.push(vcsContext);
@@ -501,30 +486,18 @@ async function runReview(
   const conversationText = serializeConversationCompact(llmMessages);
   const codeChanges = extractCodeChanges(toolCalls);
   const vcsContext = getVcsContext(ctx.cwd);
-  const reviewContext = buildReviewContext(
-    focus,
-    conversationText,
-    codeChanges,
-    vcsContext,
-  );
+  const reviewContext = buildReviewContext(focus, conversationText, codeChanges, vcsContext);
 
   if (!reviewContext) {
     if (focus === "code") {
-      ctx.ui.notify(
-        "No code changes found. Try /review or /review decisions",
-        "error",
-      );
+      ctx.ui.notify("No code changes found. Try /review or /review decisions", "error");
     } else {
       ctx.ui.notify("Nothing to review for the selected focus", "error");
     }
     return null;
   }
 
-  const systemPrompt = getSystemPrompt(
-    focus,
-    customInstructions,
-    overrideSystemPrompt,
-  );
+  const systemPrompt = getSystemPrompt(focus, customInstructions, overrideSystemPrompt);
 
   const focusLabel = focus === "all" ? "session" : focus;
   const result = await runPiJsonAgentWithUI(ctx, {
@@ -546,8 +519,7 @@ async function runReview(
 export default function (pi: ExtensionAPI) {
   // Register /review command
   pi.registerCommand("review", {
-    description:
-      "Review session activity. Usage: /review [code|decisions|lifeguard [path]]",
+    description: "Review session activity. Usage: /review [code|decisions|lifeguard [path]]",
     handler: async (args, ctx) => {
       if (!ctx.hasUI) {
         ctx.ui.notify("review requires interactive mode", "error");
@@ -590,10 +562,7 @@ export default function (pi: ExtensionAPI) {
             // Directory path - look for lifeguard config in it
             lifeguardPath = findLifeguardConfig(potentialPath);
             if (!lifeguardPath) {
-              ctx.ui.notify(
-                `No lifeguard.yaml found in ${firstArg}`,
-                "error",
-              );
+              ctx.ui.notify(`No lifeguard.yaml found in ${firstArg}`, "error");
               return;
             }
             customInstructions = lifeguardArgs.slice(firstArg.length).trim() || undefined;
@@ -630,8 +599,7 @@ export default function (pi: ExtensionAPI) {
           return;
         }
 
-        const configDir =
-          path.relative(ctx.cwd, path.dirname(lifeguardPath)) || ".";
+        const configDir = path.relative(ctx.cwd, path.dirname(lifeguardPath)) || ".";
         const review = await runReview(
           ctx,
           "code",
@@ -661,10 +629,7 @@ export default function (pi: ExtensionAPI) {
 
         const headerNote = configDir !== "." ? ` (using ${configDir}/lifeguard.yaml)` : "";
         ctx.ui.setEditorText(`Here's the lifeguard review${headerNote}:\n\n${reviewText}`);
-        ctx.ui.notify(
-          "Lifeguard review ready. Edit and submit to add to conversation.",
-          "info",
-        );
+        ctx.ui.notify("Lifeguard review ready. Edit and submit to add to conversation.", "info");
         return;
       }
 
@@ -709,13 +674,8 @@ export default function (pi: ExtensionAPI) {
       }
 
       // Display review and offer to add to conversation
-      ctx.ui.setEditorText(
-        `Here's the review of our session:\n\n${reviewText}`,
-      );
-      ctx.ui.notify(
-        "Review ready. Edit and submit to add to conversation.",
-        "info",
-      );
+      ctx.ui.setEditorText(`Here's the review of our session:\n\n${reviewText}`);
+      ctx.ui.notify("Review ready. Edit and submit to add to conversation.", "info");
     },
   });
 
@@ -727,9 +687,7 @@ export default function (pi: ExtensionAPI) {
           "What to focus the review on. 'lifeguard' reviews against project lifeguard.yaml rules. Default: all",
       }),
     ),
-    reason: Type.Optional(
-      Type.String({ description: "Why the review is being requested" }),
-    ),
+    reason: Type.Optional(Type.String({ description: "Why the review is being requested" })),
     filePaths: Type.Optional(
       Type.Array(Type.String(), {
         description:
@@ -859,18 +817,12 @@ export default function (pi: ExtensionAPI) {
 
       if (!reviewContext) {
         return {
-          content: [
-            { type: "text", text: `Nothing to review for focus: ${focus}` },
-          ],
+          content: [{ type: "text", text: `Nothing to review for focus: ${focus}` }],
           details: { empty: true },
         };
       }
 
-      const systemPrompt = getSystemPrompt(
-        effectiveFocus,
-        customInstructions,
-        lifeguardPrompt,
-      );
+      const systemPrompt = getSystemPrompt(effectiveFocus, customInstructions, lifeguardPrompt);
 
       try {
         const result = await runPiJsonAgent({
@@ -888,9 +840,7 @@ export default function (pi: ExtensionAPI) {
                   content: [
                     {
                       type: "text",
-                      text:
-                        getFinalAssistantText(partial.messages) ||
-                        "(reviewing...)",
+                      text: getFinalAssistantText(partial.messages) || "(reviewing...)",
                     },
                   ],
                   details: {
@@ -918,9 +868,7 @@ export default function (pi: ExtensionAPI) {
 
         if (!reviewText) {
           return {
-            content: [
-              { type: "text", text: "Review failed to produce output" },
-            ],
+            content: [{ type: "text", text: "Review failed to produce output" }],
             details: { error: true },
           };
         }
@@ -951,9 +899,7 @@ export default function (pi: ExtensionAPI) {
       let text = theme.bold("review ") + theme.fg("accent", focus);
       if (a.filePaths && a.filePaths.length > 0) {
         const files =
-          a.filePaths.length <= 2
-            ? a.filePaths.join(", ")
-            : `${a.filePaths.length} files`;
+          a.filePaths.length <= 2 ? a.filePaths.join(", ") : `${a.filePaths.length} files`;
         text += theme.fg("dim", ` [${files}]`);
       }
       return new Text(text, 0, 0);
@@ -982,10 +928,7 @@ export default function (pi: ExtensionAPI) {
 
       if (details?.error || details?.aborted || details?.empty) {
         return new Text(
-          theme.fg(
-            "warning",
-            "! " + (result.content[0] as { text: string }).text,
-          ),
+          theme.fg("warning", "! " + (result.content[0] as { text: string }).text),
           0,
           0,
         );
@@ -995,23 +938,16 @@ export default function (pi: ExtensionAPI) {
       const toolCalls = details?.toolCalls ?? [];
 
       // Build header with usage info
-      let header =
-        theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("review"));
+      let header = theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("review"));
       if (details?.focus) header += theme.fg("dim", ` (${details.focus})`);
       if (details?.model) header += theme.fg("dim", ` ${details.model}`);
       if (details?.usage) {
         const u = details.usage;
         const cost = Number.isFinite(u.cost) ? `$${u.cost.toFixed(4)}` : "";
-        header += theme.fg(
-          "dim",
-          ` ${u.turns}t ↑${u.input} ↓${u.output}${cost ? ` ${cost}` : ""}`,
-        );
+        header += theme.fg("dim", ` ${u.turns}t ↑${u.input} ↓${u.output}${cost ? ` ${cost}` : ""}`);
       }
       if (details?.durationMs) {
-        header += theme.fg(
-          "dim",
-          ` ${(details.durationMs / 1000).toFixed(1)}s`,
-        );
+        header += theme.fg("dim", ` ${(details.durationMs / 1000).toFixed(1)}s`);
       }
 
       const changes = details?.codeChangesCount ?? 0;
@@ -1025,10 +961,7 @@ export default function (pi: ExtensionAPI) {
       if (toolCalls.length > 0) {
         const lines = toolCalls
           .slice(-8)
-          .map(
-            (tc) =>
-              theme.fg("muted", "→ ") + theme.fg("dim", formatToolCallLine(tc)),
-          );
+          .map((tc) => theme.fg("muted", "→ ") + theme.fg("dim", formatToolCallLine(tc)));
         toolCallsText = "\n" + lines.join("\n") + "\n";
       }
 

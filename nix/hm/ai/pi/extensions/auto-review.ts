@@ -18,15 +18,9 @@ import type {
   SessionMessageEntry,
 } from "@mariozechner/pi-coding-agent";
 
-const SNOOZE_TURNS = parseInt(
-  process.env.PI_AUTO_REVIEW_SNOOZE_TURNS ?? "3",
-  10,
-);
+const SNOOZE_TURNS = parseInt(process.env.PI_AUTO_REVIEW_SNOOZE_TURNS ?? "3", 10);
 
-const MIN_CODE_CHANGES = parseInt(
-  process.env.PI_AUTO_REVIEW_MIN_CHANGES ?? "3",
-  10,
-);
+const MIN_CODE_CHANGES = parseInt(process.env.PI_AUTO_REVIEW_MIN_CHANGES ?? "3", 10);
 
 type SessionAgentMessage = SessionMessageEntry["message"];
 
@@ -35,17 +29,13 @@ interface ExtractedToolCall {
   input: Record<string, unknown>;
 }
 
-function getMessagesFromEntries(
-  entries: SessionEntry[],
-): SessionAgentMessage[] {
+function getMessagesFromEntries(entries: SessionEntry[]): SessionAgentMessage[] {
   return entries
     .filter((e): e is SessionMessageEntry => e.type === "message")
     .map((e) => e.message);
 }
 
-function extractToolCallsFromMessages(
-  messages: SessionAgentMessage[],
-): ExtractedToolCall[] {
+function extractToolCallsFromMessages(messages: SessionAgentMessage[]): ExtractedToolCall[] {
   const toolCalls: ExtractedToolCall[] = [];
 
   for (const msg of messages) {
@@ -76,9 +66,7 @@ function extractToolCallsFromMessages(
 }
 
 function countCodeChanges(toolCalls: ExtractedToolCall[]): number {
-  return toolCalls.filter(
-    (call) => call.toolName === "write" || call.toolName === "edit",
-  ).length;
+  return toolCalls.filter((call) => call.toolName === "write" || call.toolName === "edit").length;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -131,11 +119,9 @@ export default function (pi: ExtensionAPI) {
     if (pendingChangeCount < MIN_CODE_CHANGES) return;
 
     const newChangesSinceRemind = pendingChangeCount - lastRemindChangeCount;
-    const thresholdReachedSinceRemind =
-      newChangesSinceRemind >= MIN_CODE_CHANGES;
+    const thresholdReachedSinceRemind = newChangesSinceRemind >= MIN_CODE_CHANGES;
 
-    const isSnoozed =
-      lastRemindTurn > 0 && snoozeUntilTurn > 0 && turnCount <= snoozeUntilTurn;
+    const isSnoozed = lastRemindTurn > 0 && snoozeUntilTurn > 0 && turnCount <= snoozeUntilTurn;
 
     if (isSnoozed && !thresholdReachedSinceRemind) return;
 

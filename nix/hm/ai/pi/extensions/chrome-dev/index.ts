@@ -60,7 +60,7 @@ async function getMcpClient(): Promise<Client> {
 async function callChromeTool(
   toolName: string,
   args: Record<string, unknown>,
-  onUpdate?: (status: string) => void
+  onUpdate?: (status: string) => void,
 ): Promise<unknown> {
   onUpdate?.(`Connecting to Chrome DevTools...`);
   const client = await getMcpClient();
@@ -74,7 +74,7 @@ async function callChromeTool(
         arguments: args,
       },
     },
-    CallToolResultSchema
+    CallToolResultSchema,
   );
 
   return result;
@@ -108,17 +108,16 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "chrome_navigate",
     label: "Chrome Navigate",
-    description:
-      "Navigate Chrome to a URL or use browser history (back/forward/reload)",
+    description: "Navigate Chrome to a URL or use browser history (back/forward/reload)",
     parameters: Type.Object({
       type: StringEnum(["url", "back", "forward", "reload"] as const),
       url: Type.Optional(
         Type.String({
           description: "URL to navigate to (required for type=url)",
-        })
+        }),
       ),
       timeout: Type.Optional(
-        Type.Number({ description: "Navigation timeout in ms", default: 30000 })
+        Type.Number({ description: "Navigation timeout in ms", default: 30000 }),
       ),
     }),
 
@@ -128,7 +127,7 @@ export default function (pi: ExtensionAPI) {
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -152,14 +151,12 @@ export default function (pi: ExtensionAPI) {
     description:
       "Use this first for UI/layout debugging to locate the affected element and get its UID for targeting (click/eval/screenshot).",
     parameters: Type.Object({
-      verbose: Type.Optional(
-        Type.Boolean({ description: "Include more details", default: false })
-      ),
+      verbose: Type.Optional(Type.Boolean({ description: "Include more details", default: false })),
       query: Type.Optional(
         Type.String({
           description:
             "What to find or analyze in the snapshot (e.g., 'find login button', 'list all form inputs')",
-        })
+        }),
       ),
     }),
 
@@ -168,15 +165,13 @@ export default function (pi: ExtensionAPI) {
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_snapshot_subagent.ts"
+        "chrome_snapshot_subagent.ts",
       );
 
       const prompt = p.query
         ? `Take a snapshot of the current page${
             p.verbose ? " with verbose details" : ""
-          }, then analyze it to: ${
-            p.query
-          }. Return a concise summary with relevant UIDs.`
+          }, then analyze it to: ${p.query}. Return a concise summary with relevant UIDs.`
         : `Take a snapshot of the current page${
             p.verbose ? " with verbose details" : ""
           }. Summarize the page structure and list key interactive elements with their UIDs.`;
@@ -212,9 +207,7 @@ Keep output brief - extract only what's needed, not the full raw snapshot.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(analyzing page...)",
+                    text: getFinalAssistantText(partial.messages) || "(analyzing page...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -255,13 +248,13 @@ Keep output brief - extract only what's needed, not the full raw snapshot.`,
               description: "Element UID from snapshot to pass as argument",
             }),
           }),
-          { description: "Element UIDs to pass as arguments to the function" }
-        )
+          { description: "Element UIDs to pass as arguments to the function" },
+        ),
       ),
       query: Type.Optional(
         Type.String({
           description: "What to extract or summarize from the result",
-        })
+        }),
       ),
     }),
 
@@ -271,11 +264,7 @@ Keep output brief - extract only what's needed, not the full raw snapshot.`,
         args?: Array<{ uid: string }>;
         query?: string;
       };
-      const subagentPath = path.join(
-        import.meta.dirname,
-        "subagents",
-        "chrome_eval_subagent.ts"
-      );
+      const subagentPath = path.join(import.meta.dirname, "subagents", "chrome_eval_subagent.ts");
 
       const evalParams = { function: p.function, args: p.args };
       const prompt = p.query
@@ -286,9 +275,7 @@ Keep output brief - extract only what's needed, not the full raw snapshot.`,
 
       const result = await runPiJsonAgent({
         cwd: _ctx.cwd,
-        prompt: `Use chrome_eval_subagent with params: ${JSON.stringify(
-          evalParams
-        )}. ${prompt}`,
+        prompt: `Use chrome_eval_subagent with params: ${JSON.stringify(evalParams)}. ${prompt}`,
         systemPrompt: `You are a Chrome DevTools assistant. Use chrome_eval_subagent to execute JavaScript in the page.
 - Summarize the result concisely
 - For large DOM content, extract only relevant parts
@@ -314,9 +301,7 @@ Never include raw HTML dumps in your response.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(evaluating script...)",
+                    text: getFinalAssistantText(partial.messages) || "(evaluating script...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -349,17 +334,13 @@ Never include raw HTML dumps in your response.`,
       types: Type.Optional(
         Type.Array(Type.String(), {
           description: "Filter by message types (e.g., ['error', 'warning'])",
-        })
+        }),
       ),
-      pageIdx: Type.Optional(
-        Type.Number({ description: "Page index for pagination", default: 0 })
-      ),
+      pageIdx: Type.Optional(Type.Number({ description: "Page index for pagination", default: 0 })),
       pageSize: Type.Optional(
-        Type.Number({ description: "Number of messages per page", default: 20 })
+        Type.Number({ description: "Number of messages per page", default: 20 }),
       ),
-      query: Type.Optional(
-        Type.String({ description: "What to look for in console messages" })
-      ),
+      query: Type.Optional(Type.String({ description: "What to look for in console messages" })),
     }),
 
     async execute(_toolCallId, params, onUpdate, _ctx, signal) {
@@ -372,7 +353,7 @@ Never include raw HTML dumps in your response.`,
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_console_subagent.ts"
+        "chrome_console_subagent.ts",
       );
 
       const consoleParams = {
@@ -382,10 +363,10 @@ Never include raw HTML dumps in your response.`,
       };
       const prompt = p.query
         ? `List console messages with params: ${JSON.stringify(
-            consoleParams
+            consoleParams,
           )}. Focus on: ${p.query}`
         : `List console messages with params: ${JSON.stringify(
-            consoleParams
+            consoleParams,
           )}. Summarize errors and warnings.`;
 
       const { provider, model } = getChromeDevModelConfig();
@@ -418,9 +399,7 @@ Never dump full stack traces.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(fetching console...)",
+                    text: getFinalAssistantText(partial.messages) || "(fetching console...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -453,7 +432,7 @@ Never dump full stack traces.`,
         description: "Element UID from accessibility snapshot",
       }),
       dblClick: Type.Optional(
-        Type.Boolean({ description: "Double-click instead of single click" })
+        Type.Boolean({ description: "Double-click instead of single click" }),
       ),
     }),
 
@@ -463,7 +442,7 @@ Never dump full stack traces.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -498,7 +477,7 @@ Never dump full stack traces.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -525,31 +504,29 @@ Never dump full stack traces.`,
       uid: Type.Optional(
         Type.String({
           description: "Element UID to screenshot (omit for full page)",
-        })
+        }),
       ),
       fullPage: Type.Optional(
         Type.Boolean({
           description: "Capture full scrollable page",
           default: false,
-        })
+        }),
       ),
-      format: Type.Optional(
-        StringEnum(["png", "jpeg"] as const, { default: "png" })
-      ),
+      format: Type.Optional(StringEnum(["png", "jpeg"] as const, { default: "png" })),
       quality: Type.Optional(
         Type.Number({
           description: "JPEG quality 0-100",
           minimum: 0,
           maximum: 100,
-        })
+        }),
       ),
       filePath: Type.Optional(
-        Type.String({ description: "Save to file instead of returning base64" })
+        Type.String({ description: "Save to file instead of returning base64" }),
       ),
       query: Type.Optional(
         Type.String({
           description: "What to verify or describe in the screenshot",
-        })
+        }),
       ),
     }),
 
@@ -565,7 +542,7 @@ Never dump full stack traces.`,
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_screenshot_subagent.ts"
+        "chrome_screenshot_subagent.ts",
       );
 
       const defaultPath = `/tmp/screenshot-${Date.now()}.${p.format || "png"}`;
@@ -578,10 +555,10 @@ Never dump full stack traces.`,
       };
       const prompt = p.query
         ? `Take a screenshot with params: ${JSON.stringify(
-            screenshotParams
+            screenshotParams,
           )}. Then describe what you see, focusing on: ${p.query}`
         : `Take a screenshot with params: ${JSON.stringify(
-            screenshotParams
+            screenshotParams,
           )}. Confirm success and describe the captured content briefly.`;
 
       const { provider, model } = getChromeDevModelConfig();
@@ -615,9 +592,7 @@ Keep output concise - don't include raw base64 data in your response.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(capturing screenshot...)",
+                    text: getFinalAssistantText(partial.messages) || "(capturing screenshot...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -653,7 +628,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -678,7 +653,7 @@ Keep output concise - don't include raw base64 data in your response.`,
     parameters: Type.Object({
       pageIdx: Type.Number({ description: "Page index from list_pages" }),
       bringToFront: Type.Optional(
-        Type.Boolean({ description: "Focus the page and bring to front" })
+        Type.Boolean({ description: "Focus the page and bring to front" }),
       ),
     }),
 
@@ -688,7 +663,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -712,9 +687,7 @@ Keep output concise - don't include raw base64 data in your response.`,
     description: "Open a new browser tab with the specified URL",
     parameters: Type.Object({
       url: Type.String({ description: "URL to open in the new page" }),
-      timeout: Type.Optional(
-        Type.Number({ description: "Navigation timeout in ms" })
-      ),
+      timeout: Type.Optional(Type.Number({ description: "Navigation timeout in ms" })),
     }),
 
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
@@ -723,7 +696,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
 
         return {
@@ -754,7 +727,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -785,7 +758,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -805,32 +778,31 @@ Keep output concise - don't include raw base64 data in your response.`,
   pi.registerTool({
     name: "chrome_emulate",
     label: "Chrome Emulate",
-    description:
-      "Emulate device features (CPU throttling, geolocation, network conditions)",
+    description: "Emulate device features (CPU throttling, geolocation, network conditions)",
     parameters: Type.Object({
       cpuThrottlingRate: Type.Optional(
         Type.Number({
           description: "CPU slowdown factor (1-20, 1=no throttle)",
           minimum: 1,
           maximum: 20,
-        })
+        }),
       ),
       latitude: Type.Optional(
         Type.Number({
           description: "Geolocation latitude (-90 to 90)",
           minimum: -90,
           maximum: 90,
-        })
+        }),
       ),
       longitude: Type.Optional(
         Type.Number({
           description: "Geolocation longitude (-180 to 180)",
           minimum: -180,
           maximum: 180,
-        })
+        }),
       ),
       clearGeolocation: Type.Optional(
-        Type.Boolean({ description: "Set true to clear geolocation override" })
+        Type.Boolean({ description: "Set true to clear geolocation override" }),
       ),
       networkConditions: Type.Optional(
         StringEnum([
@@ -840,7 +812,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           "Fast 3G",
           "Slow 4G",
           "Fast 4G",
-        ] as const)
+        ] as const),
       ),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
@@ -853,10 +825,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           mcpParams.networkConditions = params.networkConditions;
         if (params.clearGeolocation) {
           mcpParams.geolocation = null;
-        } else if (
-          params.latitude !== undefined &&
-          params.longitude !== undefined
-        ) {
+        } else if (params.latitude !== undefined && params.longitude !== undefined) {
           mcpParams.geolocation = {
             latitude: params.latitude,
             longitude: params.longitude,
@@ -866,7 +835,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -892,7 +861,7 @@ Keep output concise - don't include raw base64 data in your response.`,
         Type.Object({
           uid: Type.String({ description: "Element UID" }),
           value: Type.String({ description: "Value to fill" }),
-        })
+        }),
       ),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
@@ -901,7 +870,7 @@ Keep output concise - don't include raw base64 data in your response.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -927,16 +896,14 @@ Keep output concise - don't include raw base64 data in your response.`,
       msgid: Type.Number({
         description: "Message ID from list_console_messages",
       }),
-      query: Type.Optional(
-        Type.String({ description: "What to extract from the message" })
-      ),
+      query: Type.Optional(Type.String({ description: "What to extract from the message" })),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, signal) {
       const p = params as { msgid: number; query?: string };
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_console_subagent.ts"
+        "chrome_console_subagent.ts",
       );
 
       const prompt = p.query
@@ -973,9 +940,7 @@ Never dump the full stack trace.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(fetching message...)",
+                    text: getFinalAssistantText(partial.messages) || "(fetching message...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -1006,24 +971,20 @@ Never dump the full stack trace.`,
       "Inspect one network request (by ID) after chrome_list_network_requests shows a failed/suspicious request.",
     parameters: Type.Object({
       reqid: Type.Optional(
-        Type.Number({ description: "Request ID (omit for currently selected)" })
+        Type.Number({ description: "Request ID (omit for currently selected)" }),
       ),
-      query: Type.Optional(
-        Type.String({ description: "What to extract from the request" })
-      ),
+      query: Type.Optional(Type.String({ description: "What to extract from the request" })),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, signal) {
       const p = params as { reqid?: number; query?: string };
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_network_subagent.ts"
+        "chrome_network_subagent.ts",
       );
 
       const prompt = p.query
-        ? `Get network request${p.reqid ? ` ${p.reqid}` : ""}. Focus on: ${
-            p.query
-          }`
+        ? `Get network request${p.reqid ? ` ${p.reqid}` : ""}. Focus on: ${p.query}`
         : `Get network request${
             p.reqid ? ` ${p.reqid}` : ""
           }. Summarize URL, status, headers, and response.`;
@@ -1060,9 +1021,7 @@ Never dump full response bodies.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(fetching request...)",
+                    text: getFinalAssistantText(partial.messages) || "(fetching request...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -1092,9 +1051,7 @@ Never dump full response bodies.`,
     description: "Accept or dismiss a browser dialog (alert, confirm, prompt)",
     parameters: Type.Object({
       action: StringEnum(["accept", "dismiss"] as const),
-      promptText: Type.Optional(
-        Type.String({ description: "Text to enter for prompt dialogs" })
-      ),
+      promptText: Type.Optional(Type.String({ description: "Text to enter for prompt dialogs" })),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
       try {
@@ -1102,7 +1059,7 @@ Never dump full response bodies.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1132,7 +1089,7 @@ Never dump full response bodies.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1158,20 +1115,16 @@ Never dump full response bodies.`,
       resourceTypes: Type.Optional(
         Type.Array(Type.String(), {
           description: "Filter by types: document, xhr, fetch, script, etc.",
-        })
+        }),
       ),
-      pageIdx: Type.Optional(
-        Type.Number({ description: "Page number (0-based)" })
-      ),
+      pageIdx: Type.Optional(Type.Number({ description: "Page number (0-based)" })),
       pageSize: Type.Optional(Type.Number({ description: "Results per page" })),
       includePreservedRequests: Type.Optional(
         Type.Boolean({
           description: "Include requests from last 3 navigations",
-        })
+        }),
       ),
-      query: Type.Optional(
-        Type.String({ description: "What to look for in network requests" })
-      ),
+      query: Type.Optional(Type.String({ description: "What to look for in network requests" })),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, signal) {
       const p = params as {
@@ -1184,7 +1137,7 @@ Never dump full response bodies.`,
       const subagentPath = path.join(
         import.meta.dirname,
         "subagents",
-        "chrome_network_subagent.ts"
+        "chrome_network_subagent.ts",
       );
 
       const listParams = {
@@ -1194,11 +1147,9 @@ Never dump full response bodies.`,
         includePreservedRequests: p.includePreservedRequests,
       };
       const prompt = p.query
-        ? `List network requests with params: ${JSON.stringify(
-            listParams
-          )}. Focus on: ${p.query}`
+        ? `List network requests with params: ${JSON.stringify(listParams)}. Focus on: ${p.query}`
         : `List network requests with params: ${JSON.stringify(
-            listParams
+            listParams,
           )}. Summarize key requests.`;
 
       const { provider, model } = getChromeDevModelConfig();
@@ -1231,9 +1182,7 @@ Keep output concise.`,
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(fetching requests...)",
+                    text: getFinalAssistantText(partial.messages) || "(fetching requests...)",
                   },
                 ],
                 details: { model: partial.model, usage: partial.usage },
@@ -1260,8 +1209,7 @@ Keep output concise.`,
   pi.registerTool({
     name: "chrome_performance_analyze_insight",
     label: "Chrome Performance Analyze Insight",
-    description:
-      "Get detailed info on a specific Performance Insight from a trace",
+    description: "Get detailed info on a specific Performance Insight from a trace",
     parameters: Type.Object({
       insightSetId: Type.String({
         description: "Insight set ID from trace results",
@@ -1272,14 +1220,11 @@ Keep output concise.`,
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
       try {
-        const result = await callChromeTool(
-          "performance_analyze_insight",
-          params,
-          (status) =>
-            onUpdate?.({
-              content: [{ type: "text", text: status }],
-              details: undefined,
-            })
+        const result = await callChromeTool("performance_analyze_insight", params, (status) =>
+          onUpdate?.({
+            content: [{ type: "text", text: status }],
+            details: undefined,
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1299,22 +1244,18 @@ Keep output concise.`,
   pi.registerTool({
     name: "chrome_performance_start_trace",
     label: "Chrome Performance Start Trace",
-    description:
-      "Start a performance trace recording for CWV and performance insights",
+    description: "Start a performance trace recording for CWV and performance insights",
     parameters: Type.Object({
       reload: Type.Boolean({ description: "Reload page after starting trace" }),
       autoStop: Type.Boolean({ description: "Auto-stop the trace recording" }),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
       try {
-        const result = await callChromeTool(
-          "performance_start_trace",
-          params,
-          (status) =>
-            onUpdate?.({
-              content: [{ type: "text", text: status }],
-              details: undefined,
-            })
+        const result = await callChromeTool("performance_start_trace", params, (status) =>
+          onUpdate?.({
+            content: [{ type: "text", text: status }],
+            details: undefined,
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1338,14 +1279,11 @@ Keep output concise.`,
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, onUpdate, _ctx, _signal) {
       try {
-        const result = await callChromeTool(
-          "performance_stop_trace",
-          {},
-          (status) =>
-            onUpdate?.({
-              content: [{ type: "text", text: status }],
-              details: undefined,
-            })
+        const result = await callChromeTool("performance_stop_trace", {}, (status) =>
+          onUpdate?.({
+            content: [{ type: "text", text: status }],
+            details: undefined,
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1377,7 +1315,7 @@ Keep output concise.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1408,7 +1346,7 @@ Keep output concise.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1439,7 +1377,7 @@ Keep output concise.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],
@@ -1462,9 +1400,7 @@ Keep output concise.`,
     description: "Wait for specified text to appear on the page",
     parameters: Type.Object({
       text: Type.String({ description: "Text to wait for" }),
-      timeout: Type.Optional(
-        Type.Number({ description: "Max wait time in ms (0 for default)" })
-      ),
+      timeout: Type.Optional(Type.Number({ description: "Max wait time in ms (0 for default)" })),
     }),
     async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
       try {
@@ -1472,7 +1408,7 @@ Keep output concise.`,
           onUpdate?.({
             content: [{ type: "text", text: status }],
             details: undefined,
-          })
+          }),
         );
         return {
           content: [{ type: "text", text: formatToolResult(result) }],

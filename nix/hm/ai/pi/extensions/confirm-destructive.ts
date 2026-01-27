@@ -12,42 +12,38 @@ import type {
 } from "@mariozechner/pi-coding-agent";
 
 export default function (pi: ExtensionAPI) {
-  pi.on(
-    "session_before_switch",
-    async (event: SessionBeforeSwitchEvent, ctx) => {
-      if (!ctx.hasUI) return;
+  pi.on("session_before_switch", async (event: SessionBeforeSwitchEvent, ctx) => {
+    if (!ctx.hasUI) return;
 
-      if (event.reason === "new") {
-        const confirmed = await ctx.ui.confirm(
-          "Clear session?",
-          "This will delete all messages in the current session."
-        );
-
-        if (!confirmed) {
-          ctx.ui.notify("Clear cancelled", "info");
-          return { cancel: true };
-        }
-        return;
-      }
-
-      // reason === "resume" - check if there are unsaved changes (messages since last assistant response)
-      const entries = ctx.sessionManager.getEntries();
-      const hasUnsavedWork = entries.some(
-        (e): e is SessionMessageEntry =>
-          e.type === "message" && e.message.role === "user"
+    if (event.reason === "new") {
+      const confirmed = await ctx.ui.confirm(
+        "Clear session?",
+        "This will delete all messages in the current session.",
       );
 
-      if (hasUnsavedWork) {
-        const confirmed = await ctx.ui.confirm(
-          "Switch session?",
-          "You have messages in the current session. Switch anyway?"
-        );
+      if (!confirmed) {
+        ctx.ui.notify("Clear cancelled", "info");
+        return { cancel: true };
+      }
+      return;
+    }
 
-        if (!confirmed) {
-          ctx.ui.notify("Switch cancelled", "info");
-          return { cancel: true };
-        }
+    // reason === "resume" - check if there are unsaved changes (messages since last assistant response)
+    const entries = ctx.sessionManager.getEntries();
+    const hasUnsavedWork = entries.some(
+      (e): e is SessionMessageEntry => e.type === "message" && e.message.role === "user",
+    );
+
+    if (hasUnsavedWork) {
+      const confirmed = await ctx.ui.confirm(
+        "Switch session?",
+        "You have messages in the current session. Switch anyway?",
+      );
+
+      if (!confirmed) {
+        ctx.ui.notify("Switch cancelled", "info");
+        return { cancel: true };
       }
     }
-  );
+  });
 }

@@ -21,8 +21,7 @@ import {
 } from "./utils/agent.js";
 import { getModelConfig } from "../agents/extension-models.js";
 
-const { model: DEFAULT_MODEL, provider: DEFAULT_PROVIDER } =
-  getModelConfig("LIBRARIAN");
+const { model: DEFAULT_MODEL, provider: DEFAULT_PROVIDER } = getModelConfig("LIBRARIAN");
 
 const LIBRARIAN_SYSTEM_PROMPT = `You are the Librarian - an expert at understanding large, complex codebases across multiple GitHub repositories.
 
@@ -73,32 +72,23 @@ function shortenPath(p: string): string {
 function formatToolCall(
   toolName: string,
   args: Record<string, unknown>,
-  themeFg: (color: ThemeColor, text: string) => string
+  themeFg: (color: ThemeColor, text: string) => string,
 ): string {
   if (toolName === "bash") {
     const command = (args.command as string) || "...";
-    const preview =
-      command.length > 70 ? `${command.slice(0, 70)}...` : command;
+    const preview = command.length > 70 ? `${command.slice(0, 70)}...` : command;
     return themeFg("muted", "$ ") + themeFg("toolOutput", preview);
   }
   if (toolName === "read") {
-    const filePath = shortenPath(
-      (args.path || args.file_path || "...") as string
-    );
+    const filePath = shortenPath((args.path || args.file_path || "...") as string);
     return themeFg("muted", "read ") + themeFg("accent", filePath);
   }
   // DeepWiki/Exa tools
   if (toolName.startsWith("deepwiki_") || toolName.startsWith("exa_")) {
     const shortName = toolName.replace(/^(deepwiki_|exa_)/, "");
-    const query = (args.query ||
-      args.repoName ||
-      args.question ||
-      "") as string;
+    const query = (args.query || args.repoName || args.question || "") as string;
     const preview = query.length > 50 ? `${query.slice(0, 50)}...` : query;
-    return (
-      themeFg("accent", shortName) +
-      (preview ? themeFg("dim", ` ${preview}`) : "")
-    );
+    return themeFg("accent", shortName) + (preview ? themeFg("dim", ` ${preview}`) : "");
   }
   const argsStr = JSON.stringify(args);
   const preview = argsStr.length > 50 ? `${argsStr.slice(0, 50)}...` : argsStr;
@@ -119,7 +109,7 @@ export default function (pi: ExtensionAPI) {
 
       // Send user message to trigger model to use librarian tool
       pi.sendUserMessage(
-        `Use the librarian tool to research external GitHub repos and documentation: ${prompt}`
+        `Use the librarian tool to research external GitHub repos and documentation: ${prompt}`,
       );
     },
   });
@@ -183,9 +173,7 @@ export default function (pi: ExtensionAPI) {
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) ||
-                      "(researching...)",
+                    text: getFinalAssistantText(partial.messages) || "(researching...)",
                   },
                 ],
                 details: {
@@ -212,11 +200,7 @@ export default function (pi: ExtensionAPI) {
           content: [
             {
               type: "text",
-              text:
-                result.errorMessage ||
-                result.stderr ||
-                output ||
-                "Research failed",
+              text: result.errorMessage || result.stderr || output || "Research failed",
             },
           ],
           details: {
@@ -248,10 +232,9 @@ export default function (pi: ExtensionAPI) {
       const query = a.query ?? "...";
       const preview = query.length > 50 ? `${query.slice(0, 50)}...` : query;
       return new Text(
-        theme.fg("toolTitle", theme.bold("librarian ")) +
-          theme.fg("accent", preview),
+        theme.fg("toolTitle", theme.bold("librarian ")) + theme.fg("accent", preview),
         0,
-        0
+        0,
       );
     },
 
@@ -261,12 +244,9 @@ export default function (pi: ExtensionAPI) {
 
       if (details?.error) {
         return new Text(
-          theme.fg(
-            "warning",
-            "⚠ " + (result.content[0] as { text: string }).text
-          ),
+          theme.fg("warning", "⚠ " + (result.content[0] as { text: string }).text),
           0,
-          0
+          0,
         );
       }
 
@@ -277,22 +257,14 @@ export default function (pi: ExtensionAPI) {
         const container = new Container();
 
         // Header with usage
-        let header =
-          theme.fg("success", "✓ ") +
-          theme.fg("toolTitle", theme.bold("librarian"));
+        let header = theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("librarian"));
         if (details?.model) header += theme.fg("dim", ` (${details.model})`);
         if (details?.usage) {
           const u = details.usage;
-          header += theme.fg(
-            "dim",
-            ` ${u.turns}t ↑${u.input} ↓${u.output} $${u.cost.toFixed(4)}`
-          );
+          header += theme.fg("dim", ` ${u.turns}t ↑${u.input} ↓${u.output} $${u.cost.toFixed(4)}`);
         }
         if (details?.durationMs) {
-          header += theme.fg(
-            "dim",
-            ` ${(details.durationMs / 1000).toFixed(1)}s`
-          );
+          header += theme.fg("dim", ` ${(details.durationMs / 1000).toFixed(1)}s`);
         }
         container.addChild(new Text(header, 0, 0));
 
@@ -300,11 +272,7 @@ export default function (pi: ExtensionAPI) {
         if (details?.query) {
           container.addChild(new Spacer(1));
           container.addChild(
-            new Text(
-              theme.fg("muted", "Query: ") + theme.fg("dim", details.query),
-              0,
-              0
-            )
+            new Text(theme.fg("muted", "Query: ") + theme.fg("dim", details.query), 0, 0),
           );
         }
 
@@ -312,50 +280,36 @@ export default function (pi: ExtensionAPI) {
         if (toolCalls.length > 0) {
           container.addChild(new Spacer(1));
           container.addChild(
-            new Text(
-              theme.fg("muted", `─── Tool Calls (${toolCalls.length}) ───`),
-              0,
-              0
-            )
+            new Text(theme.fg("muted", `─── Tool Calls (${toolCalls.length}) ───`), 0, 0),
           );
           for (const tc of toolCalls.slice(0, 20)) {
             container.addChild(
               new Text(
-                theme.fg("muted", "→ ") +
-                  formatToolCall(tc.name, tc.args, theme.fg.bind(theme)),
+                theme.fg("muted", "→ ") + formatToolCall(tc.name, tc.args, theme.fg.bind(theme)),
                 0,
-                0
-              )
+                0,
+              ),
             );
           }
           if (toolCalls.length > 20) {
             container.addChild(
-              new Text(
-                theme.fg("dim", `... +${toolCalls.length - 20} more`),
-                0,
-                0
-              )
+              new Text(theme.fg("dim", `... +${toolCalls.length - 20} more`), 0, 0),
             );
           }
         }
 
         // Result
         container.addChild(new Spacer(1));
-        container.addChild(
-          new Text(theme.fg("muted", "─── Findings ───"), 0, 0)
-        );
+        container.addChild(new Text(theme.fg("muted", "─── Findings ───"), 0, 0));
         container.addChild(new Markdown(resultText.trim(), 0, 0, mdTheme));
 
         return container;
       }
 
       // Collapsed view
-      let text =
-        theme.fg("success", "✓ ") +
-        theme.fg("toolTitle", theme.bold("librarian"));
+      let text = theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("librarian"));
       if (details?.model) text += theme.fg("dim", ` (${details.model})`);
-      if (toolCalls.length > 0)
-        text += theme.fg("dim", ` ${toolCalls.length} calls`);
+      if (toolCalls.length > 0) text += theme.fg("dim", ` ${toolCalls.length} calls`);
       if (details?.durationMs) {
         text += theme.fg("dim", ` ${(details.durationMs / 1000).toFixed(1)}s`);
       }

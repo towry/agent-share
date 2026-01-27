@@ -26,9 +26,7 @@ function isDebugEnabled(namespace: string): boolean {
  *
  * Enable with: PI_EXT_DEBUG=kg or PI_EXT_DEBUG=1
  */
-export function createDebugLog(
-  namespace: string
-): (context: string, data: unknown) => void {
+export function createDebugLog(namespace: string): (context: string, data: unknown) => void {
   return (context: string, data: unknown): void => {
     if (!isDebugEnabled(namespace)) return;
 

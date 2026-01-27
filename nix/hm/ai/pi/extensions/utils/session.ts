@@ -17,11 +17,7 @@ import { serializeConversationCompact } from "./serialize.js";
  * Format: YYYYMMDD-HHMMSS
  */
 export function generateTimestamp(date: Date = new Date()): string {
-  return date
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace("T", "-")
-    .replace(/\..*$/, "");
+  return date.toISOString().replace(/[-:]/g, "").replace("T", "-").replace(/\..*$/, "");
 }
 
 /**
@@ -38,10 +34,7 @@ export function ensureClaudeDir(cwd: string, subdir: string): string {
  * Ensures a directory exists under .claude/ in the project (async).
  * @returns The full path to the directory
  */
-export async function ensureClaudeDirAsync(
-  cwd: string,
-  subdir: string
-): Promise<string> {
+export async function ensureClaudeDirAsync(cwd: string, subdir: string): Promise<string> {
   const dir = join(cwd, ".claude", subdir);
   await mkdir(dir, { recursive: true });
   return dir;
@@ -51,10 +44,7 @@ export async function ensureClaudeDirAsync(
  * Copies a session file to .claude/sessions/ in the project directory (sync).
  * @returns The path to the saved session file, or null if source doesn't exist
  */
-export function saveSessionFileLocally(
-  cwd: string,
-  sessionFile: string
-): string | null {
+export function saveSessionFileLocally(cwd: string, sessionFile: string): string | null {
   // Check if source file exists (session might not be flushed yet)
   if (!existsSync(sessionFile)) {
     return null;
@@ -71,7 +61,7 @@ export function saveSessionFileLocally(
  */
 export async function saveSessionFileLocallyAsync(
   cwd: string,
-  sessionFile: string
+  sessionFile: string,
 ): Promise<string | null> {
   // Check if source file exists (session might not be flushed yet)
   try {
@@ -102,7 +92,7 @@ export interface SaveSessionAsMarkdownResult {
  * Used by both /clear and /handoff commands.
  */
 export async function saveSessionAsMarkdown(
-  options: SaveSessionAsMarkdownOptions
+  options: SaveSessionAsMarkdownOptions,
 ): Promise<SaveSessionAsMarkdownResult> {
   const { cwd, messages, slug = "session" } = options;
 
@@ -126,7 +116,7 @@ export async function saveSessionAsMarkdown(
       conversationText,
       "",
     ].join("\n"),
-    "utf-8"
+    "utf-8",
   );
 
   return { absolutePath, relativePath, filename };
@@ -135,14 +125,9 @@ export async function saveSessionAsMarkdown(
 /**
  * Extracts messages from session branch and converts to LLM format.
  */
-export function extractMessagesFromBranch(
-  branch: SessionEntry[]
-): Message[] {
+export function extractMessagesFromBranch(branch: SessionEntry[]): Message[] {
   const messages = branch
-    .filter(
-      (entry): entry is SessionEntry & { type: "message" } =>
-        entry.type === "message"
-    )
+    .filter((entry): entry is SessionEntry & { type: "message" } => entry.type === "message")
     .map((entry) => entry.message);
 
   return convertToLlm(messages);

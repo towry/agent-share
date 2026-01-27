@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "format": "pnpm --package=oxfmt@latest dlx oxfmt --write .",
+    "format:check": "pnpm --package=oxfmt@latest dlx oxfmt .",
     "lint": "pnpm --package=oxlint-tsgolint@latest dlx oxlint --type-aware --type-check -f stylish --tsconfig tsconfig.json .",
     "lint:file": "pnpm --package=oxlint-tsgolint@latest dlx oxlint --type-aware --type-check -f stylish --tsconfig tsconfig.json",
     "test": "vitest run",
@@ -12,7 +14,7 @@
     "@mariozechner/pi-ai": "latest",
     "@mariozechner/pi-coding-agent": "latest",
     "@mariozechner/pi-tui": "latest",
-    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@modelcontextprotocol/sdk": "^1.25.3",
     "@sinclair/typebox": "^0.34.47",
     "exa-js": "^2.0.12",
     "picomatch": "^4.0.3",
@@ -20,10 +22,10 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9",
+    "@types/node": "^25.0.10",
     "@types/picomatch": "^4.0.2",
     "@types/shell-quote": "^1.7.5",
-    "oxlint": "^1.39.0",
+    "oxlint": "^1.41.0",
     "oxlint-tsgolint": "latest",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

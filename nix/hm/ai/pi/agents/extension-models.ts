@@ -11,7 +11,7 @@ export const EXTENSION_MODELS = {
   // Model Preset Extension
   MODEL_PRESET: {
     SMART: {
-      model: "frontier-openai",
+      model: "codex/gpt-5.2-codex-medium",
       provider: "openai-sdk",
       envVar: "PI_SMART_MODEL",
     },
@@ -39,14 +39,14 @@ export const EXTENSION_MODELS = {
 
   // Librarian Extension
   LIBRARIAN: {
-    model: "bender-muffin",
-    provider: "ant-sdk",
+    model: "codex/gpt-5.2-low",
+    provider: "openai-sdk",
     envVar: "PI_LIBRARIAN_MODEL",
   },
 
   // KG Insight Extension
   KG_INSIGHT: {
-    model: "all/claude-haiku-4-5",
+    model: "ark-ant/ark-code",
     provider: "ant-sdk",
     envVar: "PI_INSIGHT_MODEL",
     fallbackEnvVar: "PI_REVIEW_MODEL",
@@ -55,15 +55,22 @@ export const EXTENSION_MODELS = {
   // Chrome DevTools Extension
   CHROME_DEV: {
     model: "codex/gpt-5.2-codex-medium",
-    provider: "openai-sdk",
+    provider: "ant-sdk",
     envVar: "PI_CHROME_DEV_MODEL",
   },
 
   // Semantic Read Extension (for handoff context extraction)
   SEMANTIC_READ: {
-    model: "all/claude-haiku-4-5",
+    model: "ark-ant/ark-code",
     provider: "ant-sdk",
     envVar: "PI_SEMANTIC_READ_MODEL",
+  },
+
+  // Handoff Extension (context transfer to new session)
+  HANDOFF: {
+    model: "ark-ant/ark-code",
+    provider: "ant-sdk",
+    envVar: "PI_HANDOFF_MODEL",
   },
 } as const;
 
@@ -106,26 +113,25 @@ export const EXTENSION_MODEL_DEFAULTS = {
     model: EXTENSION_MODELS.SEMANTIC_READ.model,
     provider: EXTENSION_MODELS.SEMANTIC_READ.provider,
   },
+  HANDOFF: {
+    model: EXTENSION_MODELS.HANDOFF.model,
+    provider: EXTENSION_MODELS.HANDOFF.provider,
+  },
 } as const;
 
 /**
  * Helper function to get model configuration with environment variable override
  */
-export function getModelConfig(
-  extension: keyof typeof EXTENSION_MODELS,
-  variant?: string,
-) {
+export function getModelConfig(extension: keyof typeof EXTENSION_MODELS, variant?: string) {
   const config = EXTENSION_MODELS[extension];
 
   // Handle nested configs (like MODEL_PRESET with SMART/RUSH variants)
   if (variant && "SMART" in config) {
     const variantConfig = config[variant as keyof typeof config];
-    if (
-      variantConfig &&
-      typeof variantConfig === "object" &&
-      "envVar" in variantConfig
-    ) {
-      return getConfigWithEnvOverride(variantConfig);
+    if (variantConfig && typeof variantConfig === "object" && "envVar" in variantConfig) {
+      const result = getConfigWithEnvOverride(variantConfig);
+      validateModelConfig(result, `${extension}.${variant}`);
+      return result;
     }
     throw new Error(
       `Invalid variant '${variant}' for extension '${extension}'. Valid variants: SMART, RUSH`,
@@ -134,7 +140,9 @@ export function getModelConfig(
 
   // Handle regular configs (no variant expected)
   if (!variant && "envVar" in config) {
-    return getConfigWithEnvOverride(config as any);
+    const result = getConfigWithEnvOverride(config as any);
+    validateModelConfig(result, extension);
+    return result;
   }
 
   // If we get here, there was a mismatch between extension type and variant usage
@@ -158,8 +166,7 @@ function getConfigWithEnvOverride(config: {
 }) {
   // Check primary env var first, then fallback if specified
   const envValue =
-    process.env[config.envVar] ||
-    (config.fallbackEnvVar && process.env[config.fallbackEnvVar]);
+    process.env[config.envVar] || (config.fallbackEnvVar && process.env[config.fallbackEnvVar]);
 
   if (envValue) {
     if (envValue.includes(":")) {
@@ -218,22 +225,18 @@ export function getRuntimeModelConfig(
 
   if (!config) {
     throw new Error(
-      `Unknown extension '${extension}'. Available: ${Object.keys(
-        EXTENSION_MODELS,
-      ).join(", ")}`,
+      `Unknown extension '${extension}'. Available: ${Object.keys(EXTENSION_MODELS).join(", ")}`,
     );
   }
 
   // Handle nested configs (like MODEL_PRESET with SMART/RUSH variants)
   if (variant && "SMART" in config) {
     const variantConfig = config[variant as keyof typeof config];
-    if (
-      variantConfig &&
-      typeof variantConfig === "object" &&
-      "envVar" in variantConfig
-    ) {
+    if (variantConfig && typeof variantConfig === "object" && "envVar" in variantConfig) {
       const envValue = process.env[variantConfig.envVar];
-      return parseEnvOverride(envValue, variantConfig);
+      const result = parseEnvOverride(envValue, variantConfig);
+      validateModelConfig(result, `${extension}.${variant}`);
+      return result;
     }
     throw new Error(
       `Invalid variant '${variant}' for extension '${extension}'. Valid variants: SMART, RUSH`,
@@ -243,12 +246,11 @@ export function getRuntimeModelConfig(
   // Handle regular configs (no variant expected)
   if (!variant && "envVar" in config) {
     // Check primary env var first, then fallback if specified
-    const fallbackEnvVar =
-      "fallbackEnvVar" in config ? config.fallbackEnvVar : undefined;
-    const envValue =
-      process.env[config.envVar] ||
-      (fallbackEnvVar && process.env[fallbackEnvVar]);
-    return parseEnvOverride(envValue, config);
+    const fallbackEnvVar = "fallbackEnvVar" in config ? config.fallbackEnvVar : undefined;
+    const envValue = process.env[config.envVar] || (fallbackEnvVar && process.env[fallbackEnvVar]);
+    const result = parseEnvOverride(envValue, config);
+    validateModelConfig(result, extension);
+    return result;
   }
 
   // If we get here, there was a mismatch between extension type and variant usage
@@ -262,3 +264,23 @@ export function getRuntimeModelConfig(
 }
 
 export type ModelPresetVariant = "SMART" | "RUSH";
+
+/**
+ * Validate model configuration before use.
+ * Throws descriptive error if provider or model is missing.
+ */
+export function validateModelConfig(
+  config: { provider: string; model: string },
+  context: string,
+): void {
+  if (!config.provider) {
+    throw new Error(
+      `[${context}] Missing provider. Model config must have both 'provider' and 'model' fields.`,
+    );
+  }
+  if (!config.model) {
+    throw new Error(
+      `[${context}] Missing model. Model config must have both 'provider' and 'model' fields.`,
+    );
+  }
+}

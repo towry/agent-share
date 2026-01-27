@@ -41,9 +41,7 @@ interface FileInfo {
 }
 
 function getFileInfo(filePath: string, cwd: string): FileInfo {
-  const resolved = path.isAbsolute(filePath)
-    ? filePath
-    : path.resolve(cwd, filePath);
+  const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
 
   // Security: check blocked paths BEFORE reading
   if (isBlockedReadPath(resolved)) {
@@ -152,18 +150,15 @@ function shortenPath(p: string): string {
 function formatToolCall(
   toolName: string,
   args: Record<string, unknown>,
-  themeFg: (color: ThemeColor, text: string) => string
+  themeFg: (color: ThemeColor, text: string) => string,
 ): string {
   if (toolName === "bash") {
     const command = (args.command as string) || "...";
-    const preview =
-      command.length > 70 ? `${command.slice(0, 70)}...` : command;
+    const preview = command.length > 70 ? `${command.slice(0, 70)}...` : command;
     return themeFg("muted", "$ ") + themeFg("toolOutput", preview);
   }
   if (toolName === "read") {
-    const filePath = shortenPath(
-      (args.path || args.file_path || "...") as string
-    );
+    const filePath = shortenPath((args.path || args.file_path || "...") as string);
     return themeFg("muted", "read ") + themeFg("accent", filePath);
   }
   const argsStr = JSON.stringify(args);
@@ -174,20 +169,19 @@ function formatToolCall(
 export default function (pi: ExtensionAPI) {
   const SemanticReadParams = Type.Object({
     filePath: Type.String({
-      description:
-        "Path to the file to read (relative to project root or absolute)",
+      description: "Path to the file to read (relative to project root or absolute)",
     }),
     query: Type.Optional(
       Type.String({
         description:
           "What context to extract (e.g., 'authentication implementation', 'files modified', 'key decisions about X')",
-      })
+      }),
     ),
     stopCriteria: Type.Optional(
       Type.String({
         description:
           "When to stop reading (e.g., 'stop after finding the main implementation file', 'stop once you identify the key decision')",
-      })
+      }),
     ),
   });
 
@@ -212,7 +206,12 @@ Use this to get summarized context from previous sessions without loading the en
       // Security: block access to protected paths
       if (fileInfo.blocked) {
         return {
-          content: [{ type: "text", text: `SECURITY: Reading "${p.filePath}" is blocked. This path is protected and cannot be accessed.` }],
+          content: [
+            {
+              type: "text",
+              text: `SECURITY: Reading "${p.filePath}" is blocked. This path is protected and cannot be accessed.`,
+            },
+          ],
           details: {
             filePath: p.filePath,
             query: p.query,
@@ -224,9 +223,7 @@ Use this to get summarized context from previous sessions without loading the en
         };
       }
 
-      const querySection = p.query
-        ? `\n\nFocus on extracting context related to: ${p.query}`
-        : "";
+      const querySection = p.query ? `\n\nFocus on extracting context related to: ${p.query}` : "";
 
       const stopSection = p.stopCriteria
         ? `\n\n## STOP CRITERIA\n${p.stopCriteria}\nOnce this criteria is met, STOP reading and provide your summary.`
@@ -236,38 +233,96 @@ Use this to get summarized context from previous sessions without loading the en
       // Get full Model object from registry for direct LLM calls
       const semanticModel = getSemanticReadModel(ctx.modelRegistry);
 
-      // Fast path: small files use direct LLM API (no subagent overhead)
-      if (fileInfo.isSmall && fileInfo.content && semanticModel) {
-        const directSystemPrompt = `You are a context extraction assistant. Extract key context from the provided session file content.
+      // Fast path: small files return content directly (no LLM overhead)
+      if (fileInfo.isSmall && fileInfo.content) {
+        const durationMs = Date.now() - startTime;
+        return {
+          content: [{ type: "text", text: fileInfo.content }],
+          details: {
+            filePath: p.filePath,
+            query: p.query,
+            stopCriteria: p.stopCriteria,
+            toolCalls: [],
+            durationMs,
+          } as SemanticReadDetails,
+        };
+      }
 
-## OUTPUT FORMAT
-Provide a concise summary with:
+      // Check if we're in a subagent context - if so, we can't spawn another subagent
+      // Fall back to reading the file directly and using direct LLM call
+      if (process.env.PI_SUBAGENT) {
+        // In subagent context: read file directly and use LLM API
+        if (!semanticModel) {
+          return {
+            content: [
+              { type: "text", text: "No model available for semantic read in subagent context" },
+            ],
+            details: {
+              filePath: p.filePath,
+              query: p.query,
+              stopCriteria: p.stopCriteria,
+              toolCalls: [],
+              error: true,
+            } as SemanticReadDetails,
+            isError: true,
+          };
+        }
 
-### Context Summary
-Brief overview of what was discussed/accomplished (2-4 sentences)
+        if (!fileInfo.exists) {
+          return {
+            content: [{ type: "text", text: `File not found: ${p.filePath}` }],
+            details: {
+              filePath: p.filePath,
+              query: p.query,
+              stopCriteria: p.stopCriteria,
+              toolCalls: [],
+              error: true,
+            } as SemanticReadDetails,
+            isError: true,
+          };
+        }
 
-### Key Decisions
-- Decision 1
-- Decision 2
+        // For large files in subagent context, read and truncate
+        let fileContent: string;
+        if (fileInfo.isSmall && fileInfo.content) {
+          fileContent = fileInfo.content;
+        } else {
+          // Large file: read directly and truncate to last 100KB
+          const resolved = path.isAbsolute(p.filePath)
+            ? p.filePath
+            : path.resolve(ctx.cwd, p.filePath);
+          try {
+            const fullContent = fs.readFileSync(resolved, "utf-8");
+            const maxChars = 100000;
+            fileContent =
+              fullContent.length > maxChars ? fullContent.slice(-maxChars) : fullContent;
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            return {
+              content: [{ type: "text", text: `Failed to read file: ${errMsg}` }],
+              details: {
+                filePath: p.filePath,
+                query: p.query,
+                stopCriteria: p.stopCriteria,
+                toolCalls: [],
+                error: true,
+              } as SemanticReadDetails,
+              isError: true,
+            };
+          }
+        }
 
-### Key Files Modified
-- \`path/to/file.ts\` - what was done
-
-### Important Findings
-Any critical discoveries, bugs found, or patterns identified
-
-### Current State
-Where things left off, what's pending`;
-
-        const userMessage: Message = {
+        const sizeNote = !fileInfo.isSmall ? " (truncated to last 100KB)" : "";
+        const fallbackSystemPrompt = SYSTEM_PROMPT_BASE;
+        const fallbackUserMessage: Message = {
           role: "user",
           content: [
             {
               type: "text",
-              text: `Extract key context from this file: ${p.filePath}${querySection}${stopSection}
+              text: `Extract key context from this file: ${p.filePath}${sizeNote}${querySection}${stopSection}
 
 <file_content>
-${fileInfo.content}
+${fileContent}
 </file_content>
 
 Provide a structured summary.`,
@@ -276,44 +331,28 @@ Provide a structured summary.`,
           timestamp: Date.now(),
         };
 
+        // NOTE: Explicitly set maxTokens because model config may exceed API limits
         const apiKey = await ctx.modelRegistry.getApiKey(semanticModel);
+        const response = await complete(
+          semanticModel,
+          {
+            systemPrompt: fallbackSystemPrompt,
+            messages: [fallbackUserMessage],
+          },
+          { apiKey, signal, maxTokens: 8192 },
+        );
 
-        const response = await complete(semanticModel, {
-          systemPrompt: directSystemPrompt,
-          messages: [userMessage],
-        }, { apiKey, signal });
-
+        // Extract text from response, handling both text and thinking blocks
         const output = response.content
-          .filter((c): c is { type: "text"; text: string } => c.type === "text")
-          .map((c) => c.text)
+          .map((c) => {
+            if (c.type === "text" && "text" in c) return c.text as string;
+            return null;
+          })
+          .filter((t): t is string => t !== null && t.length > 0)
           .join("\n");
 
         const durationMs = Date.now() - startTime;
         const modelName = `${semanticModel.provider}/${semanticModel.id}`;
-
-        if (response.stopReason === "aborted") {
-          return {
-            content: [{ type: "text", text: "Aborted" }],
-            details: {
-              filePath: p.filePath,
-              query: p.query,
-              stopCriteria: p.stopCriteria,
-              toolCalls: [],
-              model: modelName,
-              usage: response.usage
-                ? {
-                    input: response.usage.input,
-                    output: response.usage.output,
-                    cost: response.usage.cost?.total ?? 0,
-                    turns: 1,
-                  }
-                : undefined,
-              durationMs,
-              aborted: true,
-            } as SemanticReadDetails,
-            isError: true,
-          };
-        }
 
         return {
           content: [{ type: "text", text: output || "(no context extracted)" }],
@@ -337,8 +376,7 @@ Provide a structured summary.`,
       }
 
       // Large files: use subagent with grep/tail strategy
-      const systemPrompt =
-        SYSTEM_PROMPT_BASE + LARGE_FILE_STRATEGY;
+      const systemPrompt = SYSTEM_PROMPT_BASE + LARGE_FILE_STRATEGY;
 
       const sizeHint = fileInfo.exists
         ? `(${Math.round(fileInfo.sizeBytes / 1024)}KB, large)`
@@ -364,8 +402,7 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
                 content: [
                   {
                     type: "text",
-                    text:
-                      getFinalAssistantText(partial.messages) || "(reading...)",
+                    text: getFinalAssistantText(partial.messages) || "(reading...)",
                   },
                 ],
                 details: {
@@ -394,11 +431,7 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
           content: [
             {
               type: "text",
-              text:
-                result.errorMessage ||
-                result.stderr ||
-                output ||
-                "Semantic read failed",
+              text: result.errorMessage || result.stderr || output || "Semantic read failed",
             },
           ],
           details: {
@@ -433,12 +466,9 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
       const a = args as { filePath?: string; query?: string };
       const filePath = a.filePath ?? "...";
       const preview = shortenPath(filePath);
-      let text =
-        theme.fg("toolTitle", theme.bold("semantic_read ")) +
-        theme.fg("accent", preview);
+      let text = theme.fg("toolTitle", theme.bold("semantic_read ")) + theme.fg("accent", preview);
       if (a.query) {
-        const queryPreview =
-          a.query.length > 30 ? `${a.query.slice(0, 30)}...` : a.query;
+        const queryPreview = a.query.length > 30 ? `${a.query.slice(0, 30)}...` : a.query;
         text += theme.fg("dim", ` [${queryPreview}]`);
       }
       return new Text(text, 0, 0);
@@ -450,12 +480,9 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
 
       if (details?.error || details?.aborted) {
         return new Text(
-          theme.fg(
-            "warning",
-            "⚠ " + (result.content[0] as { text: string }).text
-          ),
+          theme.fg("warning", "⚠ " + (result.content[0] as { text: string }).text),
           0,
-          0
+          0,
         );
       }
 
@@ -466,16 +493,11 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
         const container = new Container();
 
         // Header with usage
-        let header =
-          theme.fg("success", "✓ ") +
-          theme.fg("toolTitle", theme.bold("semantic_read"));
+        let header = theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("semantic_read"));
         if (details?.model) header += theme.fg("dim", ` (${details.model})`);
         if (details?.usage) {
           const u = details.usage;
-          header += theme.fg(
-            "dim",
-            ` ${u.turns}t ↑${u.input} ↓${u.output} $${u.cost.toFixed(4)}`
-          );
+          header += theme.fg("dim", ` ${u.turns}t ↑${u.input} ↓${u.output} $${u.cost.toFixed(4)}`);
         }
         if (details?.durationMs) {
           const secs = (details.durationMs / 1000).toFixed(1);
@@ -488,11 +510,10 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
           container.addChild(new Spacer(1));
           container.addChild(
             new Text(
-              theme.fg("muted", "Session: ") +
-                theme.fg("dim", shortenPath(details.filePath)),
+              theme.fg("muted", "Session: ") + theme.fg("dim", shortenPath(details.filePath)),
               0,
-              0
-            )
+              0,
+            ),
           );
         }
 
@@ -500,50 +521,36 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
         if (toolCalls.length > 0) {
           container.addChild(new Spacer(1));
           container.addChild(
-            new Text(
-              theme.fg("muted", `─── Tool Calls (${toolCalls.length}) ───`),
-              0,
-              0
-            )
+            new Text(theme.fg("muted", `─── Tool Calls (${toolCalls.length}) ───`), 0, 0),
           );
           for (const tc of toolCalls.slice(0, 10)) {
             container.addChild(
               new Text(
-                theme.fg("muted", "→ ") +
-                  formatToolCall(tc.name, tc.args, theme.fg.bind(theme)),
+                theme.fg("muted", "→ ") + formatToolCall(tc.name, tc.args, theme.fg.bind(theme)),
                 0,
-                0
-              )
+                0,
+              ),
             );
           }
           if (toolCalls.length > 10) {
             container.addChild(
-              new Text(
-                theme.fg("dim", `... +${toolCalls.length - 10} more`),
-                0,
-                0
-              )
+              new Text(theme.fg("dim", `... +${toolCalls.length - 10} more`), 0, 0),
             );
           }
         }
 
         // Result
         container.addChild(new Spacer(1));
-        container.addChild(
-          new Text(theme.fg("muted", "─── Extracted Context ───"), 0, 0)
-        );
+        container.addChild(new Text(theme.fg("muted", "─── Extracted Context ───"), 0, 0));
         container.addChild(new Markdown(resultText.trim(), 0, 0, mdTheme));
 
         return container;
       }
 
       // Collapsed view
-      let text =
-        theme.fg("success", "✓ ") +
-        theme.fg("toolTitle", theme.bold("semantic_read"));
+      let text = theme.fg("success", "✓ ") + theme.fg("toolTitle", theme.bold("semantic_read"));
       if (details?.model) text += theme.fg("dim", ` (${details.model})`);
-      if (toolCalls.length > 0)
-        text += theme.fg("dim", ` ${toolCalls.length} calls`);
+      if (toolCalls.length > 0) text += theme.fg("dim", ` ${toolCalls.length} calls`);
       if (details?.durationMs) {
         const secs = (details.durationMs / 1000).toFixed(1);
         text += theme.fg("dim", ` ${secs}s`);
@@ -551,8 +558,7 @@ Provide a structured summary with: Context Summary, Key Decisions, Key Files, Im
 
       const lines = resultText.split("\n").slice(0, 5);
       text += `\n${theme.fg("toolOutput", lines.join("\n"))}`;
-      if (resultText.split("\n").length > 5)
-        text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
+      if (resultText.split("\n").length > 5) text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
 
       return new Text(text, 0, 0);
     },

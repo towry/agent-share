@@ -2,7 +2,7 @@
 name: general
 description: General agent for all kind of tasks
 tools: read, grep, find, ls, bash, write, edit
-model: bender-muffin
+model: ant-sdk:bender-muffin
 ---
 
 You are the General - an expert coding agent for all kind of tasks.

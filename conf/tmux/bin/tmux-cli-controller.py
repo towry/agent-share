@@ -250,10 +250,11 @@ class TmuxCLIController:
             raise ValueError("No target pane specified")
         self._run_tmux_command(['send-keys', '-t', target, 'Escape'])
 
-    def launch_cli(self, command: str, vertical: bool = True, size: int = 50) -> Optional[str]:
+    def launch_cli(self, command: str, vertical: bool = True, size: int = 50) -> Optional[Tuple[str, str]]:
+        """Launch a command in a new pane. Returns (raw_pane_id, formatted_pane_id) or None."""
         pane_id = self.create_pane(vertical=vertical, size=size, start_command=command)
         if pane_id:
-            return self.format_pane_identifier(pane_id)
+            return (pane_id, self.format_pane_identifier(pane_id))
         return None
 
 
@@ -466,12 +467,19 @@ class CLI:
 
     def launch(self, command: str, vertical: bool = True, size: int = 50, name: Optional[str] = None):
         if self.mode == 'local':
-            pane_id = self.controller.launch_cli(command, vertical=vertical, size=size)
-            print(f"Launched '{command}' in pane {pane_id}")
+            result = self.controller.launch_cli(command, vertical=vertical, size=size)
+            if result:
+                raw_id, formatted_id = result
+                # Output both raw pane ID (stable, e.g., %886) and formatted ID (volatile, e.g., session:3.2)
+                print(f"Launched '{command}' in pane {raw_id} ({formatted_id})")
+                return raw_id
+            else:
+                print(f"Failed to launch '{command}'")
+                return None
         else:
             pane_id = self.controller.launch_cli(command, name=name)
             print(f"Launched '{command}' in window: {pane_id}")
-        return pane_id
+            return pane_id
 
     def send(self, text: str, pane: Optional[str] = None, enter: bool = True,
              delay_enter: Union[bool, float] = True):
