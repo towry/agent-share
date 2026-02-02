@@ -51,7 +51,7 @@ export default function (pi: ExtensionAPI) {
     description: "List documentation topics for a GitHub repo via DeepWiki MCP.",
     parameters: RepoParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const serverUrl = typeof params.serverUrl === "string" ? params.serverUrl : defaultServerUrl;
       const details: DeepwikiDetails = {
         repoName: params.repoName,
@@ -82,7 +82,7 @@ export default function (pi: ExtensionAPI) {
     description: "Read DeepWiki docs for a GitHub repo via DeepWiki MCP.",
     parameters: RepoParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const serverUrl = typeof params.serverUrl === "string" ? params.serverUrl : defaultServerUrl;
       const details: DeepwikiDetails = {
         repoName: params.repoName,
@@ -121,7 +121,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const serverUrl = typeof params.serverUrl === "string" ? params.serverUrl : defaultServerUrl;
       const details: DeepwikiDetails = {
         repoName: params.repoName,

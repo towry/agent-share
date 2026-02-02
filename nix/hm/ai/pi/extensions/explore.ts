@@ -295,11 +295,11 @@ export default function (pi: ExtensionAPI) {
     }),
     keywords: Type.Array(Type.String(), {
       description:
-        "Keywords/patterns for grep search. Use | for OR patterns (e.g., 'login|signin|auth'). Include function names, domain terms, and synonyms.",
+        'Array of grep patterns, e.g., ["login|signin", "auth"]. Each element is a string; use | within a string for OR. Do NOT pass a single string.',
     }),
     filePatterns: Type.Array(Type.String(), {
       description:
-        "Glob patterns for file NAME search (e.g., '*login*', '*auth*'). Must contain specific text, NOT just extensions like '*.sh' or '*.ts' (those are filtered out).",
+        'Array of glob patterns for file NAME search, e.g., ["*login*", "*auth*"]. Must contain specific text, NOT just extensions like "*.ts".',
     }),
     semanticQuery: Type.String({
       description:
@@ -334,7 +334,7 @@ BAD filePatterns: ["*dialog*", "*component*", "*view*", "*modal*"] - too generic
 GOOD filePatterns: ["*privacy*", "*login*", "*auth*"] - specific to the feature!`,
     parameters: ExploreParams,
 
-    async execute(_toolCallId, params, onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const p = params as {
         prompt: string;
         keywords: string[];

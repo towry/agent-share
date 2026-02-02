@@ -709,7 +709,7 @@ export default function (pi: ExtensionAPI) {
       "Run a read-only review of the current session. The reviewer checks conversation context plus repo diffs to flag bugs, risks, and missing steps. Use focus to narrow scope ('code', 'decisions', or 'lifeguard'). For 'lifeguard', reviews against project lifeguard.yaml rules - auto-detects closest config to changed files, or use lifeguardPath to specify. Pass filePaths to limit review to specific files.",
     parameters: ReviewParams,
 
-    async execute(_toolCallId, params, onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const p = params as {
         focus?: ReviewFocus;
         reason?: string;

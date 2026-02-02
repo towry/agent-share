@@ -128,7 +128,7 @@ export default function (pi: ExtensionAPI) {
       "Research REMOTE GitHub repositories and external documentation via DeepWiki and web search. NOT for local codebase - use 'explore' tool for local code. Use this for: understanding external library architecture, finding implementations in public repos, reading official docs/discussions.",
     parameters: LibrarianParams,
 
-    async execute(_toolCallId, params, onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const p = params as { query: string };
 
       const envModel = process.env.PI_LIBRARIAN_MODEL;

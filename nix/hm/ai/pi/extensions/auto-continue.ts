@@ -28,12 +28,32 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
   let lastContinueTime = 0;
   let continueCount = 0;
 
+  // Reset all state when a new session starts
+  const resetState = () => {
+    lastContinueTime = 0;
+    continueCount = 0;
+  };
+
   // Reset counter on successful response
   const resetOnSuccess = () => {
     if (continueCount > 0) {
       continueCount = 0;
     }
   };
+
+  // Reset on session lifecycle events
+  pi.on("session_start", () => {
+    resetState();
+  });
+  pi.on("session_switch", () => {
+    resetState();
+  });
+  pi.on("session_fork", () => {
+    resetState();
+  });
+  pi.on("session_tree", () => {
+    resetState();
+  });
 
   pi.on("agent_end", async (event, ctx) => {
     // Get the last assistant message

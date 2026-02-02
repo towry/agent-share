@@ -193,7 +193,7 @@ export default function (pi: ExtensionAPI) {
 Use this to get summarized context from previous sessions without loading the entire conversation.`,
     parameters: SemanticReadParams,
 
-    async execute(_toolCallId, params, onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const p = params as {
         filePath: string;
         query?: string;

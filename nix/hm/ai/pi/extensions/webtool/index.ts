@@ -212,7 +212,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -249,7 +249,7 @@ export default function (pi: ExtensionAPI) {
     description: "Search the web via Exa.",
     parameters: SearchParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -302,7 +302,7 @@ export default function (pi: ExtensionAPI) {
     description: "Search the web via Exa and fetch contents.",
     parameters: SearchAndContentsParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -355,7 +355,7 @@ export default function (pi: ExtensionAPI) {
     description: "Find documents similar to a URL via Exa.",
     parameters: FindSimilarParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -401,7 +401,7 @@ export default function (pi: ExtensionAPI) {
     description: "Find similar content and fetch contents via Exa.",
     parameters: FindSimilarAndContentsParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -448,7 +448,7 @@ export default function (pi: ExtensionAPI) {
       "Download web page content from specific URLs. NOTE: Does not work with raw.githubusercontent.com or plain text URLs - use curl/bash for GitHub raw content instead.",
     parameters: GetContentsParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {
@@ -491,7 +491,7 @@ export default function (pi: ExtensionAPI) {
     description: "Answer a question with Exa search-backed citations.",
     parameters: AnswerParams,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       const apiKey = process.env.EXA_API_KEY;
       if (!apiKey) {
         return {

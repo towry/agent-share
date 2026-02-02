@@ -117,7 +117,7 @@ export default function (pi: ExtensionAPI) {
     label: "Tmux List Panes",
     description: "List all tmux panes",
     parameters: Type.Object({}),
-    async execute(_toolCallId, _params, _onUpdate, ctx, _signal) {
+    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       const res = await runTmuxCliAsync(["list_panes"], ctx.cwd);
       if (res.exitCode !== 0) {
         return result(res.stderr || "failed", true);
@@ -139,22 +139,18 @@ export default function (pi: ExtensionAPI) {
     name: "tmux_send",
     label: "Tmux Send",
     description:
-      "Send keys to a tmux pane. If PI_MASTER_PANE env is set and pane is omitted, sends to master.",
+      "Send keys to a tmux pane with pane id, after you send, wait for notify from target pane or user, do not polling for result",
     parameters: Type.Object({
-      pane: Type.Optional(
-        Type.String({
-          description: "Target pane id. Defaults to PI_MASTER_PANE if set.",
-        }),
-      ),
+      pane: Type.String({
+        description:
+          "Target pane id in %N format (e.g., %886). Note: pane id is different from pane index. Use tmux_list_panes to get pane ids.",
+      }),
       keys: Type.String({ description: "Keys to send" }),
       enter: Type.Optional(Type.Boolean({ description: "Send Enter after", default: true })),
     }),
-    async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
-      const p = params as { pane?: string; keys: string; enter?: boolean };
-      const targetPane = p.pane || process.env.PI_MASTER_PANE;
-      if (!targetPane) {
-        return result("pane is required (no PI_MASTER_PANE set)", true);
-      }
+    async execute(_toolCallId, params, _signal, onUpdate, ctx) {
+      const p = params as { pane: string; keys: string; enter?: boolean };
+      const targetPane = p.pane;
       const currentPane = process.env.TMUX_PANE;
       if (currentPane && targetPane === currentPane) {
         return result("cannot send keys to current pane", true);
@@ -163,7 +159,7 @@ export default function (pi: ExtensionAPI) {
       const paneInfo = await getCurrentPaneInfo();
       // Single-line signature to avoid shell interpreting newlines as command separators
       const signature = paneInfo.id
-        ? ` [from ${paneInfo.id}${paneInfo.title ? `: ${paneInfo.title}` : ""}]`
+        ? ` [sender_id:${paneInfo.id}, sender_title:${paneInfo.title ? `: ${paneInfo.title}` : ""}]`
         : "";
       const keysWithSig = p.keys + signature;
 
@@ -173,8 +169,19 @@ export default function (pi: ExtensionAPI) {
         `--pane=${targetPane}`,
         ...(p.enter === false ? ["--no-enter"] : []),
       ];
+
+      // Show what we're sending in the UI
+      const keysPreview = p.keys.length > 60 ? `${p.keys.slice(0, 60)}…` : p.keys;
+      onUpdate?.({
+        content: [{ type: "text", text: `→ ${targetPane}: ${keysPreview}` }],
+        details: {},
+      });
+
       const res = await runTmuxCliAsync(args, ctx.cwd);
-      return result(res.exitCode === 0 ? "sent" : res.stderr || "failed", res.exitCode !== 0);
+      if (res.exitCode !== 0) {
+        return result(res.stderr || "failed", true);
+      }
+      return result(`sent to ${targetPane}${p.enter === false ? " (no enter)" : ""}`);
     },
   });
 
@@ -189,7 +196,7 @@ export default function (pi: ExtensionAPI) {
           "Pane ID in %N format (e.g., %886). Do NOT use session:window.pane format - indices shift when panes are killed.",
       }),
     }),
-    async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as { pane: string };
 
       // Reject volatile formatted IDs (e.g., "snowball:3.2") - indices shift when panes are killed
@@ -227,7 +234,7 @@ export default function (pi: ExtensionAPI) {
     name: "tmux_capture",
     label: "Tmux Capture",
     description:
-      "Capture the content of a tmux pane. Defaults to last 10 lines. Use filter for grep with context. Do not use this for polling.",
+      "Capture the content of a tmux pane. Defaults to last 10 lines. Use filter for grep with context. Do not use this for checking result, just wait for notify.",
     parameters: Type.Object({
       pane: Type.String({ description: "Target pane id to capture" }),
       lines: Type.Optional(
@@ -242,7 +249,7 @@ export default function (pi: ExtensionAPI) {
         }),
       ),
     }),
-    async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as { pane: string; lines?: number; filter?: string };
       const currentPane = process.env.TMUX_PANE;
       if (currentPane && p.pane === currentPane) {
@@ -292,7 +299,7 @@ export default function (pi: ExtensionAPI) {
         }),
       ),
     }),
-    async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as { command: string; name?: string; cwd?: string };
       if (!p.command?.trim()) {
         return result("command is required", true);
@@ -375,7 +382,7 @@ export default function (pi: ExtensionAPI) {
           }),
         ),
       }),
-      async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         const p = params as { task: string; canNotifyMaster?: boolean };
         /// default to true
         const canNotifyMaster = typeof p.canNotifyMaster === "boolean" ? p.canNotifyMaster : true;

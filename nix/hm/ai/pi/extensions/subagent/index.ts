@@ -15,14 +15,18 @@
 import * as os from "node:os";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { StringEnum, type Message } from "@mariozechner/pi-ai";
-import { type ExtensionAPI, getMarkdownTheme, loadSettings } from "@mariozechner/pi-coding-agent";
+import {
+  type ExtensionAPI,
+  getMarkdownTheme,
+  SettingsManager,
+} from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
 import { getFinalAssistantText, resolveModel, runPiJsonAgent } from "../utils/agent.js";
 
 // Cache settings at module load
-const settings = loadSettings();
+const settings = SettingsManager.create();
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
@@ -304,7 +308,7 @@ async function runSingleAgent(
   }
 
   // Parse model field: "provider:model"
-  const { provider, model } = resolveModel(agent.model, settings.defaultProvider);
+  const { provider, model } = resolveModel(agent.model, settings.getDefaultProvider());
 
   const result = await runPiJsonAgent({
     cwd: cwd ?? defaultCwd,
@@ -405,7 +409,7 @@ export default function (pi: ExtensionAPI) {
     ].join(" "),
     parameters: SubagentParams,
 
-    async execute(_toolCallId, params, onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const agentScope: AgentScope = params.agentScope ?? "user";
       const discovery = discoverAgents(ctx.cwd, agentScope);
       const agents = discovery.agents;

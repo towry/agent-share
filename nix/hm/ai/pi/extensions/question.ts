@@ -25,7 +25,7 @@ export default function (pi: ExtensionAPI) {
       "Ask the user a question and let them pick from options. Use when you need user input to proceed.",
     parameters: QuestionParams,
 
-    async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       if (!ctx.hasUI) {
         return {
           content: [

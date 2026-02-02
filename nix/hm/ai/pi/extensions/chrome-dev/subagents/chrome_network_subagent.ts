@@ -48,7 +48,7 @@ export default function (pi: ExtensionAPI) {
       includePreservedRequests: Type.Optional(Type.Boolean()),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         onUpdate?.({
           content: [{ type: "text", text: "Connecting to Chrome DevTools..." }],
@@ -89,7 +89,7 @@ export default function (pi: ExtensionAPI) {
       reqid: Type.Optional(Type.Number({ description: "Request ID" })),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         onUpdate?.({
           content: [{ type: "text", text: "Connecting to Chrome DevTools..." }],

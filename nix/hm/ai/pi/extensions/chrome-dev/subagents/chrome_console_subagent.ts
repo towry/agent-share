@@ -47,7 +47,7 @@ export default function (pi: ExtensionAPI) {
       pageSize: Type.Optional(Type.Number()),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         onUpdate?.({
           content: [{ type: "text", text: "Connecting to Chrome DevTools..." }],
@@ -88,7 +88,7 @@ export default function (pi: ExtensionAPI) {
       msgid: Type.Number({ description: "Message ID" }),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         onUpdate?.({
           content: [{ type: "text", text: "Connecting to Chrome DevTools..." }],

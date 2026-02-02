@@ -121,7 +121,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("navigate_page", params, (status) =>
           onUpdate?.({
@@ -160,7 +160,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as { verbose?: boolean; query?: string };
       const subagentPath = path.join(
         import.meta.dirname,
@@ -258,7 +258,7 @@ Keep output brief - extract only what's needed, not the full raw snapshot.`,
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as {
         function: string;
         args?: Array<{ uid: string }>;
@@ -343,7 +343,7 @@ Never include raw HTML dumps in your response.`,
       query: Type.Optional(Type.String({ description: "What to look for in console messages" })),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as {
         types?: string[];
         pageIdx?: number;
@@ -436,7 +436,7 @@ Never dump full stack traces.`,
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("click", params, (status) =>
           onUpdate?.({
@@ -471,7 +471,7 @@ Never dump full stack traces.`,
       value: Type.String({ description: "Value to fill or option to select" }),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("fill", params, (status) =>
           onUpdate?.({
@@ -530,7 +530,7 @@ Never dump full stack traces.`,
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as {
         uid?: string;
         fullPage?: boolean;
@@ -622,7 +622,7 @@ Keep output concise - don't include raw base64 data in your response.`,
     description: "List all open browser tabs/pages",
     parameters: Type.Object({}),
 
-    async execute(_toolCallId, _params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, _params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("list_pages", {}, (status) =>
           onUpdate?.({
@@ -657,7 +657,7 @@ Keep output concise - don't include raw base64 data in your response.`,
       ),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("select_page", params, (status) =>
           onUpdate?.({
@@ -690,7 +690,7 @@ Keep output concise - don't include raw base64 data in your response.`,
       timeout: Type.Optional(Type.Number({ description: "Navigation timeout in ms" })),
     }),
 
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("new_page", params, (status) =>
           onUpdate?.({
@@ -721,7 +721,7 @@ Keep output concise - don't include raw base64 data in your response.`,
     parameters: Type.Object({
       pageIdx: Type.Number({ description: "Page index to close" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("close_page", params, (status) =>
           onUpdate?.({
@@ -752,7 +752,7 @@ Keep output concise - don't include raw base64 data in your response.`,
       from_uid: Type.String({ description: "UID of element to drag" }),
       to_uid: Type.String({ description: "UID of element to drop into" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("drag", params, (status) =>
           onUpdate?.({
@@ -815,7 +815,7 @@ Keep output concise - don't include raw base64 data in your response.`,
         ] as const),
       ),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         // Transform flat params to nested format for MCP
         const mcpParams: Record<string, unknown> = {};
@@ -864,7 +864,7 @@ Keep output concise - don't include raw base64 data in your response.`,
         }),
       ),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("fill_form", params, (status) =>
           onUpdate?.({
@@ -898,7 +898,7 @@ Keep output concise - don't include raw base64 data in your response.`,
       }),
       query: Type.Optional(Type.String({ description: "What to extract from the message" })),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as { msgid: number; query?: string };
       const subagentPath = path.join(
         import.meta.dirname,
@@ -975,7 +975,7 @@ Never dump the full stack trace.`,
       ),
       query: Type.Optional(Type.String({ description: "What to extract from the request" })),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as { reqid?: number; query?: string };
       const subagentPath = path.join(
         import.meta.dirname,
@@ -1053,7 +1053,7 @@ Never dump full response bodies.`,
       action: StringEnum(["accept", "dismiss"] as const),
       promptText: Type.Optional(Type.String({ description: "Text to enter for prompt dialogs" })),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("handle_dialog", params, (status) =>
           onUpdate?.({
@@ -1083,7 +1083,7 @@ Never dump full response bodies.`,
     parameters: Type.Object({
       uid: Type.String({ description: "Element UID from snapshot" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("hover", params, (status) =>
           onUpdate?.({
@@ -1126,7 +1126,7 @@ Never dump full response bodies.`,
       ),
       query: Type.Optional(Type.String({ description: "What to look for in network requests" })),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const p = params as {
         resourceTypes?: string[];
         pageIdx?: number;
@@ -1218,7 +1218,7 @@ Keep output concise.`,
         description: "Insight name (e.g., 'DocumentLatency', 'LCPBreakdown')",
       }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("performance_analyze_insight", params, (status) =>
           onUpdate?.({
@@ -1249,7 +1249,7 @@ Keep output concise.`,
       reload: Type.Boolean({ description: "Reload page after starting trace" }),
       autoStop: Type.Boolean({ description: "Auto-stop the trace recording" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("performance_start_trace", params, (status) =>
           onUpdate?.({
@@ -1277,7 +1277,7 @@ Keep output concise.`,
     label: "Chrome Performance Stop Trace",
     description: "Stop the active performance trace recording",
     parameters: Type.Object({}),
-    async execute(_toolCallId, _params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, _params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("performance_stop_trace", {}, (status) =>
           onUpdate?.({
@@ -1309,7 +1309,7 @@ Keep output concise.`,
         description: "Key or combo (e.g., 'Enter', 'Control+Shift+R')",
       }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("press_key", params, (status) =>
           onUpdate?.({
@@ -1340,7 +1340,7 @@ Keep output concise.`,
       width: Type.Number({ description: "Page width in pixels" }),
       height: Type.Number({ description: "Page height in pixels" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("resize_page", params, (status) =>
           onUpdate?.({
@@ -1371,7 +1371,7 @@ Keep output concise.`,
       uid: Type.String({ description: "File input element UID" }),
       filePath: Type.String({ description: "Local path of file to upload" }),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("upload_file", params, (status) =>
           onUpdate?.({
@@ -1402,7 +1402,7 @@ Keep output concise.`,
       text: Type.String({ description: "Text to wait for" }),
       timeout: Type.Optional(Type.Number({ description: "Max wait time in ms (0 for default)" })),
     }),
-    async execute(_toolCallId, params, onUpdate, _ctx, _signal) {
+    async execute(_toolCallId, params, _signal, onUpdate, _ctx) {
       try {
         const result = await callChromeTool("wait_for", params, (status) =>
           onUpdate?.({
