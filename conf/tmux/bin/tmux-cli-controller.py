@@ -12,6 +12,28 @@ import os
 import sys
 from typing import Optional, List, Dict, Tuple, Union
 
+# Unit Separator - safe delimiter for tmux format strings (pane_title etc. may contain |)
+TMUX_SEP = "\x1f"
+
+
+def get_full_command(pane_pid: str, fallback: str) -> str:
+    """Get full command line of a pane's foreground process via its PID."""
+    if not pane_pid:
+        return fallback
+    try:
+        result = subprocess.run(['pgrep', '-P', pane_pid], capture_output=True, text=True)
+        child_pid = result.stdout.strip().split('\n')[0]
+        if not child_pid:
+            return fallback
+        ps_result = subprocess.run(['ps', '-o', 'command=', '-p', child_pid], capture_output=True, text=True)
+        cmd = ps_result.stdout.strip()
+        if not cmd:
+            return fallback
+        # Strip nix store prefix for readability
+        return re.sub(r'/nix/store/[^/]+-[^/]+/bin/', '', cmd)
+    except Exception:
+        return fallback
+
 
 class TmuxCLIController:
     """Controller for interacting with CLI applications in tmux panes."""
@@ -87,15 +109,91 @@ class TmuxCLIController:
         output, code = self._run_tmux_command(['display-message', '-p', '#{window_id}'])
         return output if code == 0 else None
 
-    def list_panes(self) -> List[Dict[str, str]]:
-        if self.session_name and self.window_name:
-            target = f"{self.session_name}:{self.window_name}"
-        else:
-            target = self.get_current_window_id()
+    def list_sessions(self) -> List[Dict[str, str]]:
+        """List all tmux sessions."""
+        output, code = self._run_tmux_command([
+            'list-sessions', '-F',
+            f'#{{session_name}}{TMUX_SEP}#{{session_id}}{TMUX_SEP}#{{session_windows}}{TMUX_SEP}#{{session_attached}}{TMUX_SEP}#{{session_created}}'
+        ])
+        if code != 0:
+            return []
+        current = self.get_current_session()
+        sessions = []
+        for line in output.split('\n'):
+            if not line:
+                continue
+            parts = line.split(TMUX_SEP)
+            sessions.append({
+                'name': parts[0],
+                'id': parts[1],
+                'windows': parts[2],
+                'attached': parts[3] == '1',
+                'created': parts[4],
+                'current': parts[0] == current,
+            })
+        return sessions
 
-        cmd = ['list-panes', '-F', '#{pane_id}|#{pane_index}|#{pane_title}|#{pane_active}|#{pane_width}x#{pane_height}|#{pane_current_command}']
-        if target:
-            cmd = ['list-panes', '-t', target] + cmd[1:]
+    def create_session(self, name: str, command: Optional[str] = None, detached: bool = True,
+                       cwd: Optional[str] = None) -> Optional[str]:
+        """Create a new tmux session. Returns session name or None."""
+        if cwd:
+            if not os.path.isabs(cwd):
+                raise ValueError(f"cwd must be an absolute path, got: {cwd}")
+            if not os.path.isdir(cwd):
+                raise ValueError(f"cwd does not exist or is not a directory: {cwd}")
+        cmd = ['new-session', '-s', name, '-P', '-F', '#{session_name}']
+        if detached:
+            cmd.insert(1, '-d')
+        if cwd:
+            cmd.extend(['-c', cwd])
+        if command:
+            cmd.append(command)
+        output, code = self._run_tmux_command(cmd)
+        return output if code == 0 else None
+
+    def kill_session(self, name: str) -> bool:
+        """Kill a session. Refuses to kill the current session."""
+        current = self.get_current_session()
+        if current and name == current:
+            raise ValueError(f"Cannot kill current session '{name}'")
+        _, code = self._run_tmux_command(['kill-session', '-t', name])
+        return code == 0
+
+    def create_window(self, name: Optional[str] = None, command: Optional[str] = None,
+                      session: Optional[str] = None, cwd: Optional[str] = None,
+                      detached: bool = True) -> Optional[str]:
+        """Create a new window. Returns pane_id of the new window or None."""
+        if cwd:
+            if not os.path.isabs(cwd):
+                raise ValueError(f"cwd must be an absolute path, got: {cwd}")
+            if not os.path.isdir(cwd):
+                raise ValueError(f"cwd does not exist or is not a directory: {cwd}")
+        target_session = session or self.session_name or self.get_current_session()
+        cmd = ['new-window', '-P', '-F', '#{pane_id}']
+        if detached:
+            cmd.append('-d')
+        if target_session:
+            cmd.extend(['-t', target_session])
+        if cwd:
+            cmd.extend(['-c', cwd])
+        if name:
+            cmd.extend(['-n', name])
+        if command:
+            cmd.append(command)
+        output, code = self._run_tmux_command(cmd)
+        return output if code == 0 and output else None
+
+    def list_panes(self, session: Optional[str] = None) -> List[Dict[str, str]]:
+        """List panes. Defaults to current session if no session given."""
+        target_session = session or self.session_name or self.get_current_session()
+        if not target_session:
+            return []
+
+        fmt = (f'#{{pane_id}}{TMUX_SEP}#{{pane_index}}{TMUX_SEP}#{{pane_title}}{TMUX_SEP}'
+               f'#{{pane_active}}{TMUX_SEP}#{{pane_width}}x#{{pane_height}}{TMUX_SEP}'
+               f'#{{pane_current_command}}{TMUX_SEP}#{{window_index}}{TMUX_SEP}'
+               f'#{{window_name}}{TMUX_SEP}#{{pane_pid}}{TMUX_SEP}#{{pane_current_path}}')
+        cmd = ['list-panes', '-s', '-t', target_session, '-F', fmt]
 
         output, code = self._run_tmux_command(cmd)
         if code != 0:
@@ -103,18 +201,26 @@ class TmuxCLIController:
 
         panes = []
         for line in output.split('\n'):
-            if line:
-                parts = line.split('|')
-                pane_id = parts[0]
-                panes.append({
-                    'id': pane_id,
-                    'index': parts[1],
-                    'title': parts[2],
-                    'active': parts[3] == '1',
-                    'size': parts[4],
-                    'command': parts[5] if len(parts) > 5 else '',
-                    'formatted_id': self.format_pane_identifier(pane_id)
-                })
+            if not line:
+                continue
+            parts = line.split(TMUX_SEP)
+            pane_id = parts[0]
+            short_cmd = parts[5] if len(parts) > 5 else ''
+            pane_pid = parts[8] if len(parts) > 8 else ''
+            cwd = parts[9] if len(parts) > 9 else ''
+            entry = {
+                'id': pane_id,
+                'index': parts[1],
+                'title': parts[2],
+                'active': parts[3] == '1',
+                'size': parts[4],
+                'command': get_full_command(pane_pid, short_cmd),
+                'formatted_id': self.format_pane_identifier(pane_id),
+                'cwd': cwd,
+                'window_index': parts[6] if len(parts) > 6 else '',
+                'window_name': parts[7] if len(parts) > 7 else '',
+            }
+            panes.append(entry)
         return panes
 
     def create_pane(self, vertical: bool = True, size: Optional[int] = None,
@@ -152,7 +258,7 @@ class TmuxCLIController:
                     break
 
     def send_keys(self, text: str, pane_id: Optional[str] = None, enter: bool = True,
-                  delay_enter: Union[bool, float] = True):
+                  delay_enter: Union[bool, float] = True) -> Tuple[bool, str]:
         """Send text to a tmux pane.
 
         Args:
@@ -161,6 +267,9 @@ class TmuxCLIController:
             enter: Whether to send Enter key after text
             delay_enter: If True/float, delay before sending Enter to avoid race conditions.
                          Default 0.1s. Set to False to send Enter immediately with text.
+
+        Returns:
+            Tuple of (success: bool, error_message: str)
 
         Note:
             Uses -l flag to send text literally. Without -l, tmux interprets sequences
@@ -172,15 +281,22 @@ class TmuxCLIController:
             raise ValueError("No target pane specified")
 
         if enter and delay_enter:
-            self._run_tmux_command(['send-keys', '-l', '-t', target, text])
+            output, code = self._run_tmux_command(['send-keys', '-l', '-t', target, text])
+            if code != 0:
+                return False, output or f"send-keys failed for pane {target}"
             delay = 0.1 if isinstance(delay_enter, bool) else float(delay_enter)
             time.sleep(delay)
-            self._run_tmux_command(['send-keys', '-t', target, 'Enter'])
+            output, code = self._run_tmux_command(['send-keys', '-t', target, 'Enter'])
+            if code != 0:
+                return False, output or f"send Enter failed for pane {target}"
         else:
             cmd = ['send-keys', '-l', '-t', target, text]
             if enter:
                 cmd.append('Enter')
-            self._run_tmux_command(cmd)
+            output, code = self._run_tmux_command(cmd)
+            if code != 0:
+                return False, output or f"send-keys failed for pane {target}"
+        return True, ""
 
     def capture_pane(self, pane_id: Optional[str] = None, lines: Optional[int] = None) -> str:
         target = pane_id or self.target_pane
@@ -299,7 +415,7 @@ class RemoteTmuxController:
         self._ensure_session()
         out, code = self._run_tmux([
             'list-windows', '-t', self.session_name,
-            '-F', '#{window_index}|#{window_name}|#{window_active}|#{window_width}x#{window_height}'
+            '-F', f'#{{window_index}}{TMUX_SEP}#{{window_name}}{TMUX_SEP}#{{window_active}}{TMUX_SEP}#{{window_width}}x#{{window_height}}'
         ])
         if code != 0 or not out:
             return []
@@ -307,7 +423,7 @@ class RemoteTmuxController:
         for line in out.split('\n'):
             if not line:
                 continue
-            idx, name, active, size = line.split('|')
+            idx, name, active, size = line.split(TMUX_SEP)
             windows.append({
                 'id': f"{self.session_name}:{idx}",
                 'index': idx,
@@ -331,7 +447,7 @@ class RemoteTmuxController:
         return None
 
     def send_keys(self, text: str, pane_id: Optional[str] = None, enter: bool = True,
-                  delay_enter: Union[bool, float] = True):
+                  delay_enter: Union[bool, float] = True) -> Tuple[bool, str]:
         """Send text to a tmux window/pane.
 
         Args:
@@ -341,24 +457,34 @@ class RemoteTmuxController:
             delay_enter: If True/float, delay before sending Enter to avoid race conditions.
                          Default 0.1s. Set to False to send Enter immediately with text.
 
+        Returns:
+            Tuple of (success: bool, error_message: str)
+
         Note:
             Uses -l flag to send text literally. Without -l, tmux interprets sequences
             like '[' (copy mode), ':' (command mode), 'C-b' (prefix) as special keys,
             which can leave the pane stuck in unexpected modes.
         """
         if not text:
-            return
+            return True, ""
         target = self._window_target(pane_id)
         if enter and delay_enter:
-            self._run_tmux(['send-keys', '-l', '-t', target, text])
+            output, code = self._run_tmux(['send-keys', '-l', '-t', target, text])
+            if code != 0:
+                return False, output or f"send-keys failed for pane {target}"
             delay = 0.1 if isinstance(delay_enter, bool) else float(delay_enter)
             time.sleep(delay)
-            self._run_tmux(['send-keys', '-t', target, 'Enter'])
+            output, code = self._run_tmux(['send-keys', '-t', target, 'Enter'])
+            if code != 0:
+                return False, output or f"send Enter failed for pane {target}"
         else:
             args = ['send-keys', '-l', '-t', target, text]
             if enter:
                 args.append('Enter')
-            self._run_tmux(args)
+            output, code = self._run_tmux(args)
+            if code != 0:
+                return False, output or f"send-keys failed for pane {target}"
+        return True, ""
 
     def capture_pane(self, pane_id: Optional[str] = None, lines: Optional[int] = None) -> str:
         target = self._window_target(pane_id)
@@ -410,14 +536,15 @@ class RemoteTmuxController:
 
     def list_windows(self) -> List[Dict[str, str]]:
         self._ensure_session()
-        out, code = self._run_tmux(['list-windows', '-t', self.session_name, '-F', '#{window_index}|#{window_name}|#{window_active}'])
+        out, code = self._run_tmux(['list-windows', '-t', self.session_name, '-F',
+                                    f'#{{window_index}}{TMUX_SEP}#{{window_name}}{TMUX_SEP}#{{window_active}}'])
         if code != 0 or not out:
             return []
         windows = []
         for line in out.split('\n'):
             if not line:
                 continue
-            idx, name, active = line.split('|')
+            idx, name, active = line.split(TMUX_SEP)
             pane_out, _ = self._run_tmux(['display-message', '-p', '-t', f'{self.session_name}:{idx}', '#{pane_id}'])
             windows.append({'index': idx, 'name': name, 'active': active == '1', 'pane_id': pane_out or ''})
         return windows
@@ -461,9 +588,45 @@ class CLI:
                 title = pane.get('title', '')
                 print(f"{active_marker} {pane['formatted_id']:15} {command:20} {title}")
 
-    def list_panes(self):
-        panes = self.controller.list_panes()
+    def list_panes(self, session: Optional[str] = None):
+        panes = self.controller.list_panes(session=session)
         print(json.dumps(panes, indent=2))
+
+    def list_sessions(self):
+        sessions = self.controller.list_sessions()
+        print(json.dumps(sessions, indent=2))
+
+    def create_session(self, name: str, command: Optional[str] = None, cwd: Optional[str] = None):
+        try:
+            result = self.controller.create_session(name, command=command, cwd=cwd)
+            if result:
+                print(f"Created session: {result}")
+            else:
+                print(f"Failed to create session '{name}'", file=sys.stderr)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+
+    def kill_session(self, name: str):
+        try:
+            if self.controller.kill_session(name):
+                print(f"Killed session: {name}")
+            else:
+                print(f"Failed to kill session '{name}'", file=sys.stderr)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+
+    def create_window(self, name: Optional[str] = None, command: Optional[str] = None,
+                      session: Optional[str] = None, cwd: Optional[str] = None,
+                      detached: bool = True):
+        try:
+            pane_id = self.controller.create_window(name=name, command=command, session=session, cwd=cwd, detached=detached)
+            if pane_id:
+                formatted = self.controller.format_pane_identifier(pane_id)
+                print(f"Created window in pane {pane_id} ({formatted})")
+            else:
+                print("Failed to create window", file=sys.stderr)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
 
     def launch(self, command: str, vertical: bool = True, size: int = 50, name: Optional[str] = None):
         if self.mode == 'local':
@@ -482,19 +645,26 @@ class CLI:
             return pane_id
 
     def send(self, text: str, pane: Optional[str] = None, enter: bool = True,
-             delay_enter: Union[bool, float] = True):
+             delay_enter: Union[bool, float] = True) -> bool:
         if self.mode == 'local':
             if pane:
                 resolved_pane = self.controller.resolve_pane_identifier(pane)
                 if resolved_pane:
                     self.controller.select_pane(pane_id=resolved_pane)
                 else:
-                    print(f"Could not resolve pane identifier: {pane}")
-                    return
-            self.controller.send_keys(text, enter=enter, delay_enter=delay_enter)
+                    print(f"Could not resolve pane identifier: {pane}", file=sys.stderr)
+                    return False
+            success, error = self.controller.send_keys(text, enter=enter, delay_enter=delay_enter)
+            if not success:
+                print(f"Error: {error}", file=sys.stderr)
+                return False
         else:
-            self.controller.send_keys(text, pane_id=pane, enter=enter, delay_enter=delay_enter)
+            success, error = self.controller.send_keys(text, pane_id=pane, enter=enter, delay_enter=delay_enter)
+            if not success:
+                print(f"Error: {error}", file=sys.stderr)
+                return False
         print("Text sent")
+        return True
 
     def capture(self, pane: Optional[str] = None, lines: Optional[int] = None):
         if self.mode == 'local':
@@ -613,6 +783,10 @@ tmux-cli - Control CLI applications in tmux panes
 COMMANDS:
   status              Show current tmux status and panes
   list_panes          List all panes in current window (JSON)
+  list_sessions       List all tmux sessions (JSON)
+  create_session NAME Create a new tmux session
+  kill_session NAME   Kill a session (cannot kill current)
+  create_window       Create a new window in current/specified session
   launch CMD          Launch command in new pane
   send TEXT           Send text to a pane
   capture             Capture pane output
@@ -626,6 +800,10 @@ COMMANDS:
 
 OPTIONS:
   --pane=ID           Target pane (index, %id, or session:window.pane)
+  --session=NAME      Target session for list_panes/create_window
+  --name=NAME         Window name for create_window
+  --command=CMD       Command to run in new session/window
+  --cwd=PATH          Working directory (must be absolute path that exists)
   --lines=N           Lines to capture
   --vertical/--no-vertical  Split direction for launch
   --size=N            Pane size percentage
@@ -636,6 +814,12 @@ OPTIONS:
 
 EXAMPLES:
   tmux-cli status
+  tmux-cli list_sessions
+  tmux-cli create_session my-session --cwd=/Users/towry/workspace
+  tmux-cli kill_session old-session
+  tmux-cli create_window --session=main --name=editor --cwd=/Users/towry/project
+  tmux-cli create_window --name=build --command="make build"
+  tmux-cli list_panes --session=main
   tmux-cli launch "python3"
   tmux-cli send "print('hello')" --pane=1
   tmux-cli capture --pane=1 --lines=20
@@ -698,7 +882,23 @@ def main():
     if cmd == 'status':
         cli.status()
     elif cmd == 'list_panes':
-        cli.list_panes()
+        cli.list_panes(session=kwargs.get('session'))
+    elif cmd == 'list_sessions':
+        cli.list_sessions()
+    elif cmd == 'create_session':
+        if not positional:
+            print("Error: create_session requires a session name")
+            return
+        cli.create_session(positional[0], command=kwargs.get('command'), cwd=kwargs.get('cwd'))
+    elif cmd == 'kill_session':
+        if not positional:
+            print("Error: kill_session requires a session name")
+            return
+        cli.kill_session(positional[0])
+    elif cmd == 'create_window':
+        cli.create_window(name=kwargs.get('name'), command=kwargs.get('command'),
+                          session=kwargs.get('session'), cwd=kwargs.get('cwd'),
+                          detached=kwargs.get('detached', True))
     elif cmd == 'launch':
         if not positional:
             print("Error: launch requires a command")
@@ -706,9 +906,10 @@ def main():
         cli.launch(positional[0], **kwargs)
     elif cmd == 'send':
         if not positional:
-            print("Error: send requires text")
-            return
-        cli.send(positional[0], **kwargs)
+            print("Error: send requires text", file=sys.stderr)
+            sys.exit(1)
+        if not cli.send(positional[0], **kwargs):
+            sys.exit(1)
     elif cmd == 'capture':
         content = cli.capture(**kwargs)
         print(content)

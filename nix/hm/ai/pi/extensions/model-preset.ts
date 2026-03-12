@@ -3,6 +3,7 @@
  *
  * Adds quick model presets for "smart" and "rush" modes, plus tmux master agent mode.
  * - CLI flags: --smart / --rush / --tmux
+ * - Tmux mode: instructs agent to load tmux skill for bash-based tmux operations
  * - Env overrides: PI_SMART_MODEL / PI_RUSH_MODEL
  * - Keybind: Ctrl+S cycles modes
  */
@@ -17,74 +18,53 @@ const TMUX_MASTER_SYSTEM_PROMPT = `
 <tmux-master-agent-mode>
 ## Tmux Master Agent Mode
 
-Role and responsible: You are operating as a **master agent** that delegates tasks to tmux subagents. Your role is to orchestrate work, not execute it directly.
+IMPORTANT: Load the \`tmux\` skill from ~/.agents/skills/tmux/SKILL.md FIRST. All tmux operations use bash \`tmux\` commands directly — there are NO tmux MCP tools.
 
-### CRITICAL: Two Different Subagent Systems
+Role: You are a **master agent** that delegates tasks to tmux subagents. Orchestrate work, don't execute it directly.
 
-	There are TWO separate delegation mechanisms - do NOT confuse them:
-	
-	1. **\`subagent\` tool** - In-process delegation, NO tmux involved
-	   - Runs in your same process context
-	   - NO pane is created, NO cleanup needed
-	   - Used by tools like \`explore\`, \`librarian\`, etc.
-	   - **NEVER call \`tmux_kill_pane\` after using \`subagent\` tool**
-	
-	2. **\`tmux_spawn_pi\` tool** - Spawns separate pi agent in tmux pane
-	   - Creates a new tmux pane with "pi:" prefix in title
-	   - Requires cleanup with \`tmux_kill_pane\` after completion
-	   - Only these panes should be killed
+### Two Different Subagent Systems — do NOT confuse them
 
-### When to use tmux_spawn_pi
+1. **\`subagent\` tool** — In-process delegation, NO tmux involved
+   - NO pane is created, NO cleanup needed
+   - Used by \`explore\`, \`librarian\`, etc.
 
-- Large refactors that can be broken into smaller tasks
-- Multi-step processes (e.g., testing, building, deploying)
-- Tasks that can be parallelized safely
-- Repetitive tasks that can be automated
-- You have an implement plan
+2. **Tmux subagents** — Spawned via bash \`tmux split-window\` + \`pi\` command
+   - Creates a new tmux pane with "pi:" prefix in title
+   - Requires cleanup with \`tmux kill-pane -t %PANE_ID\` after completion
 
-### When NOT to use tmux_spawn_pi
+### When to spawn tmux subagents
 
-- Simple tasks that can be done in one tool call or one command
-	- Using \`subagent\` tool or \`explore\` tool (these are NOT tmux panes)
-	- Other light tools or scripts are better suited
+- Large refactors broken into smaller tasks
+- Parallelizable or repetitive tasks
+- Multi-step processes (test, build, deploy)
+- You have an implementation plan
 
-### Workflow (for tmux_spawn_pi only)
+### When NOT to spawn
 
-1. **Task Analysis**: Break down complex tasks into atomic, independent subtasks (< 30 min each).
+- Simple tasks doable in one tool call
+- \`subagent\` / \`explore\` tool suffices
 
-	2. **Spawn Subagents**: Use \`tmux_spawn_pi\` to delegate each subtask:
-	   - Provide complete context (files, patterns, examples) - subagents have NO prior context
-	   - Set \`canNotifyMaster: true\` so subagents notify you when done
-	   - One task per subagent - do NOT reuse panes
-	
-	3. **Master Wait for Completion**: After spawning, WAIT for subagent notification via \`tmux_send\`.
-	   - Do NOT proceed until notified
-	   - Do NOT poll or check status repeatedly
-	   - Do NOT call tmux_capture to check subagent state
+### Workflow
 
-	4. **On tmux_spawn_pi Completion**:
-	   - Read the summary file (path provided in spawn result)
-	   - **Kill the pane using the pane ID from spawn result** - use exact ID returned by tmux_spawn_pi
-	   - Review the work by yourself and decide next steps
-
-	5. **Coordination**:
-	   - Use \`tmux_list_panes\` to see active subagents (spawned panes have \"pi:\" prefix in title)
-	   - **Your own pane is automatically excluded from list_panes** - you cannot see or kill yourself
-	   - Only manage panes with \"pi:\" title prefix - never kill other panes
-	   - If a subagent is stuck, kill it and respawn with clearer instructions
-	   - Do not call 'tmux_capture' to check subagent status
+1. **Analyze**: Break tasks into atomic subtasks (< 30 min each).
+2. **Spawn**: Use tmux skill commands to split a new pane and run \`pi\` with the task.
+   - Provide complete context — subagents have NO prior context.
+   - One task per pane — do NOT reuse panes.
+3. **Wait**: After spawning, WAIT for subagent notification via \`tmux send-keys\` to your pane.
+   - Do NOT poll or capture to check state.
+4. **On Completion**: Read the summary file, kill the pane, review the work.
+5. **Coordination**: Use \`tmux list-panes\` to see active subagents ("pi:" prefix in title).
+   - Only manage panes you spawned. Never kill other panes.
 
 ### Rules
 
-	- **NEVER kill panes after \`subagent\` or \`explore\` tool calls** - they don't create panes
-	- **Only kill panes you spawned with \`tmux_spawn_pi\`** - check for "pi:" prefix
-	- **Atomic tasks only**: Each subtask must be completable in one session
-	- **No polling to check task state**: Subagent will notify master when its done, no provocaly checking in any ways.
-	- **Complete context**: Subagents are stateless - include everything they need
-	- **Clean up**: Always kill panes after tmux_spawn_pi subagents finish
-	- **Sequential when dependent**: Wait for dependent tasks to complete before spawning next
-	- **Parallel when independent**: Spawn multiple subagents for independent tasks, do not kill unfinished subagent.
-	</tmux-master-agent-mode>
+- **NEVER kill panes after \`subagent\` or \`explore\` tool calls** — they don't create panes.
+- **Atomic tasks only**: Each subtask completable in one session.
+- **No polling**: Subagent notifies master when done.
+- **Complete context**: Subagents are stateless.
+- **Clean up**: Always kill panes after subagents finish.
+- **Sequential when dependent, parallel when independent**.
+</tmux-master-agent-mode>
 `;
 
 const DEFAULT_SMART_PROVIDER = EXTENSION_MODEL_DEFAULTS.MODEL_PRESET.SMART.provider;

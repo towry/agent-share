@@ -57,12 +57,12 @@ We've been working on X. Key decisions:
 ## Workflow & Context Files
 The agent followed this path:
 1. Read \`AGENTS.md\` which pointed to skill X
-2. Loaded skill from \`~/.claude/skills/X/SKILL.md\`
+2. Loaded skill from \`~/.agents/skills/X/SKILL.md\`
 3. Discovered existing script \`scripts/do-thing.sh\` (don't write new one!)
 
 Key context files to read:
 - \`AGENTS.md\` - contains project conventions for Y
-- \`~/.claude/skills/X/SKILL.md\` - workflow for Z task
+- \`~/.agents/skills/X/SKILL.md\` - workflow for Z task
 
 ## Recent Developments
 (LATEST, be detailed):

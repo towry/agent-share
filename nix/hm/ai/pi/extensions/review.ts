@@ -57,7 +57,7 @@ import { getRuntimeModelConfig } from "../agents/extension-models.js";
 
 const VCS_CONTEXT_SCRIPT = path.join(
   process.env.HOME ?? "",
-  ".claude/skills/git-jj/scripts/review_vcs_context.sh",
+  ".agents/skills/git-jj/scripts/review_vcs_context.sh",
 );
 
 function getReviewModel(registry: ModelRegistry) {

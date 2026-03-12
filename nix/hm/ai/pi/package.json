@@ -11,21 +11,22 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@mariozechner/pi-agent-core": "latest",
     "@mariozechner/pi-ai": "latest",
     "@mariozechner/pi-coding-agent": "latest",
     "@mariozechner/pi-tui": "latest",
-    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@sinclair/typebox": "^0.34.48",
-    "exa-js": "^2.3.0",
+    "exa-js": "^2.4.0",
     "picomatch": "^4.0.3",
     "shell-quote": "^1.8.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.3.0",
     "@types/picomatch": "^4.0.2",
     "@types/shell-quote": "^1.7.5",
-    "oxlint": "^1.42.0",
+    "oxlint": "^1.50.0",
     "oxlint-tsgolint": "latest",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

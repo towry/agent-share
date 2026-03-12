@@ -6,70 +6,71 @@
  * - "model_name" (uses default provider)
  * - "provider:model_name" (specifies both provider and model)
  */
+export const Providers = {
+  OpenaiFast: "openai-fast",
+  AntSdk: "ant-sdk",
+  OpenaiSdk: "openai-sdk",
+  AliCodingPlan: "ali-coding-plan",
+  ArkCode: "arkcode",
+  KimiCoding: "kimi-coding",
+};
+
+const CheapModel = {
+  model: "kimi-k2.5",
+  provider: Providers.KimiCoding,
+};
 
 export const EXTENSION_MODELS = {
   // Model Preset Extension
   MODEL_PRESET: {
     SMART: {
-      model: "codex/gpt-5.2-codex-medium",
-      provider: "openai-sdk",
+      model: "openai/gpt-5.2-codex",
+      provider: Providers.Zenmux,
       envVar: "PI_SMART_MODEL",
     },
     RUSH: {
       // model: "bender-muffin",
-      model: "all/claude-opus-4-5",
-      provider: "ant-sdk",
+      model: "anthropic/claude-sonnet-4.6",
+      provider: Providers.Zenmux,
       envVar: "PI_RUSH_MODEL",
     },
   },
 
   // Explore Extension
   EXPLORE: {
-    model: "ark-ant/ark-code",
-    provider: "ant-sdk",
+    ...CheapModel,
     envVar: "PI_EXPLORE_MODEL",
   },
 
   // Review Extension
   REVIEW: {
-    model: "codex/gpt-5.2-codex-xhigh",
-    provider: "openai-sdk",
+    model: "openai/gpt-5.2-codex",
+    provider: Providers.Zenmux,
     envVar: "PI_REVIEW_MODEL",
   },
 
   // Librarian Extension
   LIBRARIAN: {
-    model: "codex/gpt-5.2-low",
-    provider: "openai-sdk",
+    ...CheapModel,
     envVar: "PI_LIBRARIAN_MODEL",
   },
 
   // KG Insight Extension
   KG_INSIGHT: {
-    model: "ark-ant/ark-code",
-    provider: "ant-sdk",
+    ...CheapModel,
     envVar: "PI_INSIGHT_MODEL",
     fallbackEnvVar: "PI_REVIEW_MODEL",
   },
 
-  // Chrome DevTools Extension
-  CHROME_DEV: {
-    model: "codex/gpt-5.2-codex-medium",
-    provider: "ant-sdk",
-    envVar: "PI_CHROME_DEV_MODEL",
-  },
-
   // Semantic Read Extension (for handoff context extraction)
   SEMANTIC_READ: {
-    model: "ark-ant/ark-code",
-    provider: "ant-sdk",
+    ...CheapModel,
     envVar: "PI_SEMANTIC_READ_MODEL",
   },
 
   // Handoff Extension (context transfer to new session)
   HANDOFF: {
-    model: "ark-ant/ark-code",
-    provider: "ant-sdk",
+    ...CheapModel,
     envVar: "PI_HANDOFF_MODEL",
   },
 } as const;
@@ -104,10 +105,6 @@ export const EXTENSION_MODEL_DEFAULTS = {
   KG_INSIGHT: {
     model: EXTENSION_MODELS.KG_INSIGHT.model,
     provider: EXTENSION_MODELS.KG_INSIGHT.provider,
-  },
-  CHROME_DEV: {
-    model: EXTENSION_MODELS.CHROME_DEV.model,
-    provider: EXTENSION_MODELS.CHROME_DEV.provider,
   },
   SEMANTIC_READ: {
     model: EXTENSION_MODELS.SEMANTIC_READ.model,
@@ -170,7 +167,7 @@ function getConfigWithEnvOverride(config: {
 
   if (envValue) {
     if (envValue.includes(":")) {
-      const [provider, model] = envValue.split(":", 2);
+      const [provider = "", model = ""] = envValue.split(":", 2);
       return { provider, model };
     } else {
       return { provider: config.provider, model: envValue };

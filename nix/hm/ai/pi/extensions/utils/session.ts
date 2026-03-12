@@ -21,27 +21,27 @@ export function generateTimestamp(date: Date = new Date()): string {
 }
 
 /**
- * Ensures a directory exists under .claude/ in the project (sync).
+ * Ensures a directory exists under .agents/ in the project (sync).
  * @returns The full path to the directory
  */
-export function ensureClaudeDir(cwd: string, subdir: string): string {
-  const dir = join(cwd, ".claude", subdir);
+export function ensureAgentsDir(cwd: string, subdir: string): string {
+  const dir = join(cwd, ".agents", subdir);
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 /**
- * Ensures a directory exists under .claude/ in the project (async).
+ * Ensures a directory exists under .agents/ in the project (async).
  * @returns The full path to the directory
  */
-export async function ensureClaudeDirAsync(cwd: string, subdir: string): Promise<string> {
-  const dir = join(cwd, ".claude", subdir);
+export async function ensureAgentsDirAsync(cwd: string, subdir: string): Promise<string> {
+  const dir = join(cwd, ".agents", subdir);
   await mkdir(dir, { recursive: true });
   return dir;
 }
 
 /**
- * Copies a session file to .claude/sessions/ in the project directory (sync).
+ * Copies a session file to .agents/sessions/ in the project directory (sync).
  * @returns The path to the saved session file, or null if source doesn't exist
  */
 export function saveSessionFileLocally(cwd: string, sessionFile: string): string | null {
@@ -49,14 +49,14 @@ export function saveSessionFileLocally(cwd: string, sessionFile: string): string
   if (!existsSync(sessionFile)) {
     return null;
   }
-  const sessionsDir = ensureClaudeDir(cwd, "sessions");
+  const sessionsDir = ensureAgentsDir(cwd, "sessions");
   const savedPath = join(sessionsDir, basename(sessionFile));
   copyFileSync(sessionFile, savedPath);
   return savedPath;
 }
 
 /**
- * Copies a session file to .claude/sessions/ in the project directory (async).
+ * Copies a session file to .agents/sessions/ in the project directory (async).
  * @returns The path to the saved session file, or null if source doesn't exist
  */
 export async function saveSessionFileLocallyAsync(
@@ -69,7 +69,7 @@ export async function saveSessionFileLocallyAsync(
   } catch {
     return null;
   }
-  const sessionsDir = await ensureClaudeDirAsync(cwd, "sessions");
+  const sessionsDir = await ensureAgentsDirAsync(cwd, "sessions");
   const savedPath = join(sessionsDir, basename(sessionFile));
   await copyFile(sessionFile, savedPath);
   return savedPath;
@@ -88,7 +88,7 @@ export interface SaveSessionAsMarkdownResult {
 }
 
 /**
- * Saves session messages as a readable markdown file in .claude/sessions/.
+ * Saves session messages as a readable markdown file in .agents/sessions/.
  * Used by both /clear and /handoff commands.
  */
 export async function saveSessionAsMarkdown(
@@ -100,8 +100,8 @@ export async function saveSessionAsMarkdown(
   const now = new Date();
   const sessionId = randomUUID();
   const filename = `${generateTimestamp(now)}-session-${slug}-ID_${sessionId}.md`;
-  const relativePath = join(".claude", "sessions", filename);
-  const sessionDir = await ensureClaudeDirAsync(cwd, "sessions");
+  const relativePath = join(".agents", "sessions", filename);
+  const sessionDir = await ensureAgentsDirAsync(cwd, "sessions");
   const absolutePath = join(sessionDir, filename);
 
   await writeFile(
