@@ -1,6 +1,9 @@
 ---
 name: playwriter
-description: Control the user own Chrome browser via Playwriter extension with Playwright code snippets in a stateful local js sandbox via playwriter cli. Automate web interactions, take screenshots, inspect accessibility trees, debug & profile web applications. Run `playwriter skill` command to read the complete up to date skill
+description: |
+  用：经 playwriter CLI 控制 Chrome——网页自动化、截图、无障碍快照、DOM 交互、网络拦截、性能分析。触发词 [playwriter]、[browser automation]、[accessibility snapshot]。
+
+  不用：HTTP API 测试 (走 bruno)。
 ---
 
 ## CLI 用法
@@ -245,6 +248,20 @@ await page.locator("button").first().click(); // 首匹配
 await page.locator(".item").last().click(); // 末匹配
 await page.locator("li").nth(3).click(); // 第四项（0 起）
 ```
+
+## 辨识无语义图标按钮
+
+数枚图标按钮形近，无 `data-testid`、class 混淆、SVG 难辨者，勿盲试 `nth()`。先取**用户所道之用途**（如"打开海报"）化为关键词，再按下序由廉至贵择策——多数情形前三策即定，无须遍历。
+
+1. **求用户协作**：嘱用户右键 → "Copy Playwriter Element Reference"，再 `getLocatorStringForElement(page.evaluateHandle(() => globalThis.playwriterPinnedElem1))` 取稳定选择器。最廉、最确。
+2. **源码反查**（本地有仓库时）：以用户关键词 `rg` 搜组件文件，读 JSX/template/handler 名，得真实 class、icon 名、`aria-label` 等锚点回 DOM 锁定。dev 模式可配 `getReactSource` 验候选归属哪个组件。class 经混淆者，仍可借源码所见 `aria-label`/`data-*` 等不混淆锚点。
+3. **隐性文本搜索**：图标按钮常带 `aria-label`、`title`、`alt`、`sr-only`。`accessibilitySnapshot({ page, search: /关键词/i })` 或 `getByRole('button', { name: /…/i })` / `getByTitle` / `[aria-label*="…"]` 直定。
+4. **视觉定位**：`screenshotWithAccessibilityLabels({ page })` 阅图辨色与位置，取对应 `aria-ref` 点击。
+5. **SVG / 邻近过滤**：图标库常以 `<use href="#icon-…">` 或 `<svg class="icon-…">` 命名；以 `getCleanHTML({ search })` 搜之，或 `button:has(svg use[href*="…"])`、父容器 `filter({ hasText })` 缩范围。
+6. **hover 取 tooltip**：候选按钮逐个 `hover()`，读 `[role="tooltip"]` 文本辨身份。
+7. **行为反查**（末选）：候选逐个点之，监听网络请求、URL、`[role="dialog"]` 出现以辨——能触发预期效果者即是。每次点完按 `Escape` 还原。
+
+**末招——坐标点击**：以上皆失效方用 `page.mouse.click(x, y)`。依分辨率，仅作临时手段，须即时回禀用户补稳定锚点。
 
 ## 页面操作
 
