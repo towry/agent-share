@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "list": {
+      "file": "scripts/list.sh",
+      "runtime": "bash",
+      "description": "List design-kit references — styles and workflows with one-line descriptions"
+    }
+  }
+}
