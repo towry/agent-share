@@ -1,0 +1,8 @@
+Add an `aria-label` to every icon-only `<button>` across the 23 files under `app/` and `components/` in our Next.js app — that's about 60 of them, and design ships three or four more every sprint, so I don't want to go hunting for the ones I missed again next month.
+Our `deploy` CLI is supposed to run the same 14 validation checks in `--dry-run` as in a real deploy, but `runDeploy()` and `previewDeploy()` in `src/commands/deploy.ts` have diverged twice this quarter and I keep finding checks that exist in only one of them.
+I need to know which rows in `events.parquet` (about 3.2M) have a `user_id` that isn't present in `users.parquet`, and ops asks me for that same number again after every nightly backfill.
+Migrate the 47 modules under `infra/modules/` off the deprecated `aws_s3_bucket` resource onto `aws_s3_bucket_v2`, including the 200-plus references scattered through `main.tf` in each of the 6 environment stacks.
+I have 120 new strings in `translations.json` that need to land in all 9 `Localizable.strings` files with the right escaping and key ordering, and localization drops a fresh batch of these every release.
+Every exported function in `src/` needs a runnable `@example` in its JSDoc — roughly 90 of them — and `pnpm docs:verify` in CI executes each example, so anything stale fails the build.
+The 30 Playwright specs under `e2e/` each create their own user through `POST /api/users` and inline their own auth header; I need all of them switched to the new `testUser` fixture and the `storageState` produced by `auth.setup.ts`.
+The 40 `.mdx` files in `docs/api/` are copied out of `openapi.yaml` and four endpoints already disagree with the spec, and we cut a release every two weeks.

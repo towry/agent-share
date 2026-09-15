@@ -1,0 +1,44 @@
+{
+  "scripts": {
+    "eda-analyzer": {
+      "file": "scripts/eda_analyzer.py",
+      "runtime": "python3",
+      "description": "Bounded redacted EDA report for one local CSV/TSV/JSON (optional NumPy, HDF5, FASTA/FASTQ, image metadata)"
+    },
+    "tabular-profile": {
+      "file": "scripts/tabular_profile.py",
+      "runtime": "python3",
+      "description": "Aggregate schema and profile for a local CSV or TSV"
+    },
+    "missingness-leakage-audit": {
+      "file": "scripts/missingness_leakage_audit.py",
+      "runtime": "python3",
+      "description": "Missingness and split-overlap audit for a local CSV or TSV"
+    },
+    "distribution-sensitivity": {
+      "file": "scripts/distribution_sensitivity.py",
+      "runtime": "python3",
+      "description": "Classical vs robust distribution summaries; does not transform source data"
+    },
+    "capability-manifest": {
+      "file": "scripts/capability_manifest.py",
+      "runtime": "python3",
+      "description": "List supported formats or inspect one local file without dumping contents"
+    },
+    "report-scaffold": {
+      "file": "scripts/report_scaffold.py",
+      "runtime": "python3",
+      "description": "Write a local Markdown EDA report scaffold"
+    },
+    "image-inspector": {
+      "file": "scripts/image_inspector.py",
+      "runtime": "python3",
+      "description": "Container metadata for local PNG/JPEG/TIFF; pixels are not decoded"
+    },
+    "sequence-inspector": {
+      "file": "scripts/sequence_inspector.py",
+      "runtime": "python3",
+      "description": "Bounded FASTA/FASTQ aggregates; sequence text is not emitted"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+# Rebuild the Honcho skill index when this repository's skills/ library changes.
+#
+# The indexer appends a new build into the existing `skills-index` session and
+# then repoints `metadata.current_build` (and `git_sha`). The find-hot-skill
+# plugin searches with that pointer, so earlier builds stay in the session but
+# are never returned. An interrupted run leaves the previous pointer in place.
+#
+# Principle-skill example tasks are checked in as `examples.txt`. The indexer
+# only reads them; it does not call a model.
+#
+# Required repository secrets, 1:1 with the indexer env:
+#   AMPCODE_HONCHO_API_KEY
+#   AMPCODE_HONCHO_WORKSPACE_ID
+name: Index skills
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - skills/**
+      - scripts/index-skills.ts
+      - .github/workflows/index-skills.yml
+  workflow_dispatch:
+
+concurrency:
+  group: index-skills
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Require indexer secrets
+        env:
+          AMPCODE_HONCHO_API_KEY: ${{ secrets.AMPCODE_HONCHO_API_KEY }}
+          AMPCODE_HONCHO_WORKSPACE_ID: ${{ secrets.AMPCODE_HONCHO_WORKSPACE_ID }}
+        run: |
+          missing=
+          [ -n "$AMPCODE_HONCHO_API_KEY" ] || missing="$missing AMPCODE_HONCHO_API_KEY"
+          [ -n "$AMPCODE_HONCHO_WORKSPACE_ID" ] || missing="$missing AMPCODE_HONCHO_WORKSPACE_ID"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing" >&2
+            exit 1
+          fi
+
+      - name: Build Honcho skill index
+        env:
+          AMPCODE_HONCHO_API_KEY: ${{ secrets.AMPCODE_HONCHO_API_KEY }}
+          AMPCODE_HONCHO_WORKSPACE_ID: ${{ secrets.AMPCODE_HONCHO_WORKSPACE_ID }}
+        run: bun scripts/index-skills.ts

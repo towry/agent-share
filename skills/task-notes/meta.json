@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "notes": {
+      "file": "scripts/notes.py",
+      "runtime": "python3",
+      "description": "Task-scoped JSONL scratchpad: add/list/show/resolve/consolidate/export-html"
+    }
+  }
+}

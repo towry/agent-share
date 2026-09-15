@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "ts-analyzer": {
+      "file": "scripts/ts_analyzer.py",
+      "runtime": "python3",
+      "description": "Trend, growth, rolling average, and z-score anomaly report for a date plus metric CSV"
+    }
+  }
+}

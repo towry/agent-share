@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "validate": {
+      "file": "scripts/validate-mermaid.ts",
+      "runtime": "bun"
+    },
+    "present": {
+      "file": "scripts/present-mermaid.ts",
+      "runtime": "bun"
+    }
+  }
+}

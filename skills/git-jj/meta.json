@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "repo-check": {
+      "file": "scripts/repo_check.sh",
+      "runtime": "bash",
+      "description": "Detect repository type — outputs 'jj', 'git', or 'no-repo'"
+    },
+    "review-vcs-context": {
+      "file": "scripts/review_vcs_context.sh",
+      "runtime": "bash",
+      "description": "Output VCS status (changed files only, no full diff) for code review"
+    },
+    "list-gh-assignees": {
+      "file": "scripts/list_gh_assignees.sh",
+      "runtime": "bash",
+      "description": "Resolve who to assign on a GitHub issue/PR — lists assignable users plus a recent-committer 'real name -> GitHub login' mapping. Optional arg N = commits to scan (default 100)"
+    }
+  }
+}

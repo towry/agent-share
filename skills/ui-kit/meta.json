@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "list": {
+      "file": "scripts/list.sh",
+      "runtime": "bash",
+      "description": "List ui-kit references — audits and fixes with one-line descriptions"
+    }
+  }
+}

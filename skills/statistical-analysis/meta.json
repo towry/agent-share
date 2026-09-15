@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "assumption-checks": {
+      "file": "scripts/assumption_checks.py",
+      "runtime": "python3",
+      "description": "Library of normality, variance, residual, and outlier checks for research statistics"
+    }
+  }
+}

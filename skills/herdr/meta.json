@@ -1,0 +1,24 @@
+{
+  "scripts": {
+    "whoami": {
+      "file": "scripts/whoami.sh",
+      "runtime": "bash",
+      "description": "Print your own herdr pane identity (PANE_ID/WORKSPACE/TAB/AGENT/LABEL/FOCUSED) from $HERDR_PANE_ID"
+    },
+    "resolve": {
+      "file": "scripts/resolve.sh",
+      "runtime": "bash",
+      "description": "Discover pane id(s) from a soft ref (right/left/up/down, tab:N, focused, name). Multi-candidate refs exit non-zero and list every PANE_ID — pick one before sending"
+    },
+    "send-signed": {
+      "file": "scripts/send_signed.sh",
+      "runtime": "bash",
+      "description": "Send a signed message into a concrete pane id only (e.g. w1:p2). Soft refs (right/left/...) rejected - resolve first. Default signature is one-way: the receiver pushes nothing back and the sender waits + reads. --await-reply appends a push-reply command instead - REPL senders ending their turn only, never combined with wait+read. Usage: send-signed [--await-reply] <pane_id> \"<message>\""
+    },
+    "new-tab-run": {
+      "file": "scripts/new_tab_run.sh",
+      "runtime": "bash",
+      "description": "Open a new tab in your workspace (no focus steal) and run a command in its root pane; prints PANE_ID=<root>. Usage: new-tab-run \"<label>\" \"<command>\""
+    }
+  }
+}

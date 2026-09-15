@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "count-skill-desc-tokens": {
+      "file": "scripts/count-skill-desc-tokens.sh",
+      "runtime": "bash",
+      "description": "Count frontmatter description tokens for skills (o200k_base, flag >150)"
+    }
+  }
+}

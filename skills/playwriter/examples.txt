@@ -1,0 +1,8 @@
+The staging Reports page only shows the Export CSV button after SSO, and curl to /api/reports/export comes back 401 without the Chrome cookie, so I need to click the button in the already-logged-in tab and save the downloaded file.
+Instagram's following list is a JS-heavy infinite scroll behind a login wall, and webfetch just returns the empty shell HTML, so I need the rendered posts from my real Chrome session.
+The icon-only toolbar on localhost:3000/editor has no data-testid and the SVG buttons all look the same in the DOM, so I need an accessibility snapshot to find the "open poster" control and click it.
+The ops mosaic at /ops/grid is a photo gallery whose DOM order does not match what I see, so I need a labelled screenshot to click the third card in the second row.
+I want to reverse-engineer the /api/feed pagination on the production app by intercepting XHR while I scroll the logged-in tab, then replay the captured request instead of scraping the DOM.
+After submitting the checkout form on staging I need a screenshot of the confirmation page to confirm the order number actually rendered, because the unit test never hits the Stripe redirect.
+The React checkout only throws in Chrome, not in the Jest suite, so I need to pause on that exception in the live tab and inspect the local variables around CartProvider.
+Click the Download invoice button on the billing page and save the PDF so I can check the line items, because the link is generated client-side after a POST I cannot replay with curl.

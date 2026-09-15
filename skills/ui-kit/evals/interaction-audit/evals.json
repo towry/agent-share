@@ -1,0 +1,33 @@
+{
+  "skill_name": "ux-interaction-audit",
+  "evals": [
+    {
+      "id": 1,
+      "name": "keyboard-explicit-rules",
+      "prompt": "Please review the keyboard interaction code for this iOS chat app, which uses a hybrid SwiftUI/UIKit native + WebView H5 architecture. Check each expected behavior:\n\nR1: When the keyboard appears, do not push the content upward if the content and input box still fit within the remaining viewport. Keep the content in place.\nR2: When the content exceeds the remaining viewport, position the latest message directly above the keyboard after it appears.\nR3: If the user has manually scrolled away from the bottom, do not change scrollTop when the keyboard appears, because that would interrupt reading.\n\nThe code is in two files: `ChatViewController.swift` (native side) and `chat.js` (WebView side).",
+      "expected_output": "The review reports that R1 is violated by unconditional paddingBottom + scrollIntoView and R3 is violated because the code does not track whether the user has moved away from the bottom. It reports R2 as partially satisfied or uncertain: scrollIntoView runs only when lastMsg exists, but after paddingBottom is added, the viewport's effective bottom does align with the top of the keyboard, so the message may be positioned correctly. It provides file:line evidence and classifies the mechanisms as unconditional side effects, forgotten state, and missing symmetry because there is no keyboardWillHide handler. **Do not** provide a fix. The report includes severity, scenario, expected behavior, actual behavior, mechanism, evidence, and violated rules.",
+      "files": [
+        "evals/interaction-audit/fixtures/test-1-keyboard-explicit/ChatViewController.swift",
+        "evals/interaction-audit/fixtures/test-1-keyboard-explicit/chat.js"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "streaming-symptoms-only",
+      "prompt": "I have a chat app. When the AI outputs messages in a streaming manner, the automatic scrolling feedback at the bottom is not quite right:\n\n- When the user slides up to view history, the streaming new content continues to pull the page back to the bottom, interrupting reading.\n- Occasionally the page will freeze if the output is too fast.\n- When streaming is stopped and then restarted, sometimes it no longer automatically sticks to the bottom.\n\nThe code is at `ChatList.jsx`. Is this code correct? Please take a look.",
+      "expected_output": "Because the user did not provide rules, the skill must **first propose a list of rules** covering automatic bottom-sticking, no forced scrolling after the user moves away, restoration after the user returns to the bottom, a guard for programmatic scrolling, and reasonable performance thresholds. It must state that user confirmation is pending before auditing against those rules. The audit identifies that RAF always sets scrollTop and ignores user deviation (fatal); the missing isUserScrolling guard causes races and performance collapse (severe); epsilon=4 is too small and sensitive (medium); the path that restores bottom-sticking after the user returns to the bottom is missing (severe); and dead code or missing symmetry may exist. The report begins with a scenario and includes expected behavior, actual behavior, mechanism classifications, severity ordering, and file:line evidence. **Do not** provide a fix.",
+      "files": [
+        "evals/interaction-audit/fixtures/test-2-streaming-symptoms/ChatList.jsx"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "pull-to-refresh-cross-domain",
+      "prompt": "React Native list pull-down refresh interaction, is this implementation reasonable? See `ListView.jsx` for the code.",
+      "expected_output": "This non-keyboard, non-chat scenario tests whether the skill generalizes. The skill must **propose general PTR rules**: trigger only when the list is at the top and the user pulls down; damp or proportionally scale the pull distance; provide visual feedback at the threshold; animate the rebound on release; handle cancellation with onTouchCancel; handle multiple fingers; and preserve the visual refresh state until onRefresh resolves. It must wait for user confirmation before reviewing the code. The review identifies: no check that the list is at the top (fatal because it conflicts with normal scrolling), 1:1 tracking without damping (medium), no rebound animation on release (medium), no threshold feedback (medium), missing touchCancel handling (medium), and the single-finger touches[0] assumption (minor). The report includes severity, scenario, expected behavior, actual behavior, mechanism, evidence, and violated proposed rules. **Do not** provide a fix.",
+      "files": [
+        "evals/interaction-audit/fixtures/test-3-pull-to-refresh/ListView.jsx"
+      ]
+    }
+  ]
+}

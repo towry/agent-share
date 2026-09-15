@@ -1,0 +1,8 @@
+I already mapped the auth middleware and ruled out putting the session check in the handler, and now I need to ask oracle about the module boundary, then send another agent to implement from those facts instead of searching the repo again.
+Code exploration found the three entry points and two dead-end designs, and the later tech-research agent would otherwise start from scratch, so I need a shared place to pass known facts, ruled-out options, and the remaining question.
+I am splitting a large migration across two subagents, and the second one needs the first one's proven paths and constraints without re-reading the same files.
+The reviewer thread has none of this conversation, so I need to hand it the evidence I already collected and tell it not to re-explore the repository unless it finds a conflict.
+Oracle is about to answer a design question, but the later implementer will not see this thread, so I need a per-topic handoff with known facts, hypotheses kept separate, and a pointer to the remaining decision.
+I consulted a read-only advisor after exploring, and the next agent would research the wrong question unless it first reads the entry points, constraints, and ruled-out options I already have.
+Two parallel agents are working on the same topic, and I need them to continue from the same intermediate state instead of each repeating the codebase search.
+The task has several phases, and I need later read-only subagents to start from proven facts with evidence rather than treating my earlier notes as a trusted wiki or rewriting the whole dump.
