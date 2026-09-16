@@ -5,8 +5,8 @@ Public skill library. Each skill is `skills/<name>/SKILL.md` (frontmatter `name`
 ## Skills
 
 - Write portable instructions: repo-relative paths, `$HOME` / `<HOME>` placeholders, or fictional `~/...` examples. Do not bind a skill to one machine.
-- `principle-*` skills keep `examples.txt` with at least 8 task lines in concise English. Refresh with `bun scripts/generate-skill-examples.ts` when the body no longer matches those tasks.
-- Indexer credentials stay in the environment, never in skill files. CI rebuilds the Honcho index on `main`; do not run `bun scripts/index-skills.ts` unless publishing.
+- `examples.txt` with at least 8 task lines in concise English. Refresh with `bun scripts/generate-skill-examples.ts` when the body no longer matches those tasks.
+- credentials stay in the environment, never in skill files. 
 
 ## Safety
 
