@@ -16,6 +16,7 @@ STYLES=(
   "blueprint-editorial|Blueprint editorial UI; serif-led technical reading, gray tonal surfaces, line-art diagrams, soft product panels."
   "google-material-design|Material Design 3; elevation, HCT dynamic color, motion patterns, adaptive layouts."
   "paper-ui-style|Paper-like reading UI; warm off-white, centered narrow column, serif body + sans headings, generous whitespace."
+  "classic-mac|Classic Mac OS (System 1-7) UI; desktop-gray canvas, beveled windows, striped title bars, hard offset shadows, Chicago-era type."
 )
 
 WORKFLOWS=(
