@@ -1,7 +1,7 @@
 ---
 name: design-kit
 description: |
-  Use this reference collection for design styles and design-parity workflows. It covers monochrome, blueprint editorial, Material Design, and paper UI, plus implementing MasterGo designs without layout drift. Trigger it when users mention those styles, provide a MasterGo URL, say the result still looks different, or ask for screenshot-based parity review.
+  Use this reference collection for design styles and design-parity workflows. It covers monochrome, blueprint editorial, Material Design, paper UI, and classic Mac OS (System 1–7), plus implementing MasterGo designs without layout drift. Trigger it when users mention those styles, provide a MasterGo URL, say the result still looks different, or ask for screenshot-based parity review.
 
   Do not use it to codify project-wide visual standards in DESIGN.md (use design-md), perform visual critique only (use ui-visual-critique), or audit UI interaction compliance (use ux-interaction-audit).
 ---
@@ -31,7 +31,8 @@ design-kit/
 │   │   ├── monochrome.md             # monochrome / terminal aesthetics; high contrast, restrained chrome
 │   │   ├── blueprint-editorial.md     # technical paper + engineering sketch; gray-scale hierarchy, line-art diagrams, soft product panels
 │   │   ├── google-material-design.md # Material Design 3; elevation, HCT dynamic color, adaptive layouts
-│   │   └── paper-ui-style.md         # Paper UI; reading-first, warm paper feel, centered narrow column, serif body text
+│   │   ├── paper-ui-style.md         # Paper UI; reading-first, warm paper feel, centered narrow column, serif body text
+│   │   └── classic-mac.md            # Classic Mac OS (System 1–7); beveled windows, striped title bars, hard offset shadows
 │   └── workflows/                    # design workflow conventions
 │       └── mastergo-parity.md        # implementing MasterGo designs with parity; structure before code
 ```
@@ -47,7 +48,7 @@ design-kit/
 
 Run `list` and load the relevant reference when the user mentions any of the following:
 
-- Style terms: `monochrome` / `terminal 风格` / `极简单色` / `blueprint` / `technical paper` / `工程草图` / `Material Design` / `Material 风格` / `paper UI` / `阅读风格` / `博客排版`
+- Style terms: `monochrome` / `terminal 风格` / `极简单色` / `blueprint` / `technical paper` / `工程草图` / `Material Design` / `Material 风格` / `paper UI` / `阅读风格` / `博客排版` / `classic Mac` / `System 7` / `复古 Mac 风格`
 - Parity work: the user provides a MasterGo URL, says “还是不一样 / 差别很大 / looks wrong”, or asks for screenshot-based review.
 - A vague request about “设计风格” or “视觉风格”: run `list` first and let the user choose.
 
